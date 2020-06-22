@@ -43,8 +43,11 @@ A:B = \rm{tr}(\it A\cdot \it B^T) = A_{ij}B_{ij}\,(scalar)
 $$
 
 For A with order m and B with order n (m>n), their double contraction is a tensor C with order (m-n):
-> eg. for A with order 5 and B with order 2:
+> eg. 
+> + for A with order 5 and B with order 2:
 $$C_{ijk}=(A:B)_{ijk}=A_{ijkpq}B_{pq}$$
+> + $\boldsymbol{s}:\boldsymbol{s}=\rm tr(\boldsymbol{s}\cdot\boldsymbol{s}^T)$
+> if $\boldsymbol{s}$ is symmetric, then $\boldsymbol{s}:\boldsymbol{s}=\rm tr(\boldsymbol{s}\cdot\boldsymbol{s})=\rm tr(\boldsymbol{s}^2)=\|\boldsymbol{s}\|^2$
 
 [Tensor product]
 "$\otimes$" denotes tensor product of tensors.
@@ -259,8 +262,8 @@ Thus
 
 
 [$J_2$ invariant of the stress deviator]
-Note:  
-stress deviator $\boldsymbol{s}$ is symmetric $\Rightarrow$ $\boldsymbol{s}:\boldsymbol{s}=\rm{tr}(\boldsymbol{s}\cdot\boldsymbol{s}^T)=\boldsymbol{s}:\boldsymbol{s}=\rm{tr}(\boldsymbol{s}\cdot\boldsymbol{s})$
+:exclamation:  
+stress deviator $\boldsymbol{s}$ is symmetric $\Rightarrow$ $\boldsymbol{s}:\boldsymbol{s}=\rm{tr}(\boldsymbol{s}\cdot\boldsymbol{s}^T)=\rm{tr}(\boldsymbol{s}\cdot\boldsymbol{s})$
 trace of this deviatoric stress tensor is 0$\Rightarrow \rm{tr}\boldsymbol{s}=0$ 
 $$
 J_2 \equiv -I_2(\boldsymbol{s}) = \frac{1}{2}\boldsymbol{s}:\boldsymbol{s} = \frac{1}{2}\rm{tr}[\boldsymbol{s}\cdot\boldsymbol{s}] = \frac{1}{2}\|\boldsymbol{s}\|^2
@@ -270,6 +273,8 @@ $$
 $$
 J_3 \equiv I_3(\boldsymbol{s})\equiv \det s = \frac{1}{3}\rm{tr}(\boldsymbol{s})^3
 $$
+
+where ${\rm tr}(\boldsymbol{s})^3=\sum_i s_i^3\quad(i\in\{1,2,3\})$ and $s_1, s_2, s_3$ are the three eigenvalues of symmetric tensor $\boldsymbol{s}$.
 
 #### Engineering strain/stress
 Plane strain/stress:
@@ -922,7 +927,7 @@ $$
    $
    with $E_{11}^*=\frac{3E}{3(1-\nu)+E\Delta\gamma},E_{22}^*=\frac{2G}{1+2G\Delta\gamma},E_{33}^*=\frac{E_{22}^*}{2}$
    + Compute matrix $\mathbf{EP}$
-   $
+   $$
    \begin{aligned}
    \mathbf{EP}
    =&\begin{bmatrix}
@@ -933,9 +938,15 @@ $$
    \frac{1}{3}\begin{bmatrix}2&-1&0\\-1&2&0\\0&0&6\\\end{bmatrix}\\
    =&\begin{bmatrix}
    \frac{1}{6}E_{11}^*+\frac{1}{2}E_{22}^*&\frac{1}{6}E_{11}^*-\frac{1}{2}E_{22}^*&0\\\frac{1}{6}E_{11}^*-\frac{1}{2}E_{22}^*&\frac{1}{6}E_{11}^*+\frac{1}{2}E_{22}^*&0\\0&0&E_{22}^*\\
+   \end{bmatrix}\\
+   =&
+   \begin{bmatrix}
+   \frac{2}{3}E_{11}-\frac{1}{3}E_{12}&\frac{2}{3}E_{12}-\frac{1}{3}E_{11}&0\\
+   \frac{2}{3}E_{12}-\frac{1}{3}E_{22}&\frac{2}{3}E_{22}-\frac{1}{3}E_{12}&0\\
+   0&0&2E_{33}\\
    \end{bmatrix}
    \end{aligned}
-   $
+   $$
    + Compute vector $\mathbf{n}$
    $$
    \begin{aligned}
