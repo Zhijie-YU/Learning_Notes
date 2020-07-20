@@ -623,7 +623,7 @@ $$
 $$
 
 where $\alpha=\frac{3K-2G}{3K+4G}$
-The tangent operator here is equivalent to the one mentioned in previous section:
+The tangent operator here is **equivalent** to the one mentioned in previous section:
 $$\mathbf{D}^e=2G\boldsymbol{\rm{I}}_S+A(K-\frac{2}{3}G)\mathbf{i}\mathbf{i}^T$$
 
 where for plane stress condition,

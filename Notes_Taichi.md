@@ -1,9 +1,61 @@
-# Taichi
-[TOC]
-## Taichi basics
+# Taichi {ignore=True}
+<!-- @import "[TOC]" {cmd="toc" depthFrom=2 depthTo=5 orderedList=false} -->
+
+<!-- code_chunk_output -->
+
+- [Taichi {ignore=True}](#taichi-ignoretrue)
+  - [Taichi language](#taichi-language)
+  - [Taichi syntax basics](#taichi-syntax-basics)
+    - [Data format](#data-format)
+    - [Kernel and function](#kernel-and-function)
+    - [For loops](#for-loops)
+    - [Atomic operations](#atomic-operations)
+    - [Scope](#scope)
+    - [Phases of a Taichi program](#phases-of-a-taichi-program)
+    - [Debug mode](#debug-mode)
+  - [Lagrangian and Eulerian View](#lagrangian-and-eulerian-view)
+    - [Lagrangian simulation approaches (1)](#lagrangian-simulation-approaches-1)
+      - [Mass-spring system](#mass-spring-system)
+      - [Time integration](#time-integration)
+      - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
+      - [Lagrangian fluid simulation: Smoothed particle hydrodynamics(SPH)](#lagrangian-fluid-simulation-smoothed-particle-hydrodynamicssph)
+      - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
+    - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
+      - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
+      - [Taichi programming language advanced features](#taichi-programming-language-advanced-features)
+        - [ODOP](#odop)
+        - [Metaprogramming](#metaprogramming)
+        - [Differentiable programming](#differentiable-programming)
+        - [Visualization](#visualization)
+    - [Eulerian Fluid Simulation](#eulerian-fluid-simulation)
+      - [Gradient](#gradient)
+      - [Divergence](#divergence)
+      - [Curl](#curl)
+      - [Laplace operator $\Delta$](#laplace-operator-math-xmlnshttpwwww3org1998mathmathmlsemanticsmrowmi-mathvariantnormalδmimrowannotation-encodingapplicationx-texdeltaannotationsemanticsmathδ)
+    - [1.2.4. Poisson's Equation and Fast Method](#124-poissons-equation-and-fast-method)
+  - [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
+    - [FEM overview](#fem-overview)
+    - [Discretizing Poisson's equation](#discretizing-poissons-equation)
+      - [2D Poisson's equation](#2d-poissons-equation)
+      - [Weak formulation](#weak-formulation)
+      - [Getting rid of second-order terms](#getting-rid-of-second-order-terms)
+      - [Discretization](#discretization)
+    - [Discretizing linear elasticity](#discretizing-linear-elasticity)
+      - [Linear elasticity FEM](#linear-elasticity-fem)
+      - [Index notation](#index-notation)
+      - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
+      - [Building the linear system](#building-the-linear-system)
+    - [Topology optimization](#topology-optimization)
+
+<!-- /code_chunk_output -->
+
+## Taichi language
+
+
+## Taichi syntax basics
 The gene of Taichi is parallel computing.
 ### Data format
-Tensor is a multidim array whose elements can be everything even matrices.
+==Tensor== is a multidim array whose elements can be everything even matrices.
 ```python
 import taichi as ti
 ti.init()
@@ -224,7 +276,7 @@ Relationship: $\boldsymbol{\tau}=J\boldsymbol{\sigma}=\mathbf{P}\mathbf{F}^T\qua
 conversion formula:
 $$K=\frac{E}{3(1-2\nu)}\qquad\lambda=\frac{E\nu}{(1+\nu)(1-2\nu)}\qquad\mu=\frac{E}{2(1+\nu)}$$
 
-Popular hyperelastic material models
+Popular hyperelastic material models (for each element)
 * Neo-Hookean
   * $\psi(\mathbf{F})=\frac{\mu}{2}\sum_i[(\mathbf{F}^T\mathbf{F})_{ii}-1]-\mu\log(J)+\frac{\lambda}{2}\log^2(J)$
   * $\mathbf{P}(\mathbf{F})=\frac{\partial\psi(\mathbf{F})}{\partial\mathbf{F}}=2\mu(\mathbf{F}-\mathbf{R})+\lambda(J-1)J\mathbf{F}^{-T}$
@@ -270,5 +322,186 @@ Variable aliasing
 reverse-mode automatic differentiation (AutoDiff)
 $$f(x)\Rightarrow\frac{\partial f(x)}{\partial x}$$
 ##### Visualization
+
+
+
+### Eulerian Fluid Simulation
+#### Gradient
+梯度
+Hamilton operator $\nabla=(\frac{\partial}{\partial x_1},\frac{\partial}{\partial x_2},\dots,\frac{\partial}{\partial x_n})$
+对于标量场$F(x_1,x_2,\dots,x_n)$,其梯度为矢量$\nabla F=(\frac{\partial F}{\partial x_1},\frac{\partial F}{\partial x_2},\dots,\frac{\partial F}{\partial x_n})$ 
+对于矢量场$\boldsymbol{F}(x_1,x_2,\dots,x_n)=(F_1,F_2,\dots,F_n)$,
+其梯度为二阶张量$\nabla\boldsymbol{F}_{ij}=\frac{\partial F_i}{\partial x_j}$ (Jacobi matrix)
+对于标量场，其旋度为其梯度最大的方向，且梯度大小即为旋度模量。
+
+#### Divergence
+散度
+“径向发散概念”
+散度作用于矢量场得到标量
+$\rm{div}\boldsymbol{F}=\nabla\cdot\boldsymbol{F}=\frac{\partial F_1}{\partial x_1}+\frac{\partial F_2}{\partial x_2}+\dots+\frac{\partial F_n}{\partial x_n}$
+散度表示空间矢量场各点发散的强弱程度，物理意义为表征场的有源性，为场量在该点通量的体密度。
+* $\rm{div}\boldsymbol{F}>0$表示该点为正源（发散源）；
+* $\rm{div}\boldsymbol{F}<0$表示该点为负源（洞或汇）；
+* $\rm{div}\boldsymbol{F}=0$表示该点无源。
+
+可以用于理解高斯公式（高斯散度定理）
+$\int_V\nabla\cdot\boldsymbol{F}\,dV=\int_S\boldsymbol{F}\cdot\,d\boldsymbol{S}$
+即封闭区域表面通量之和等于体积域内旋度即通量体密度的体积积分。
+
+通量为单位时间内通过某个曲面的量
+散度即通量强度
+
+#### Curl
+旋度
+“周向发散概念”
+旋度作用于矢量场得到矢量
+对于三维场量$\boldsymbol{F}=F_x\hat i+F_y\hat j+F_z\hat k$
+其旋度可以表示为
+$$\rm{curl}\boldsymbol{F}=\nabla\times\boldsymbol{F}=\begin{vmatrix}
+    \hat i&\hat j&\hat k\\
+    \frac{\partial}{\partial x}&\frac{\partial}{\partial y}&\frac{\partial}{\partial z}\\
+    F_x&F_y&F_z\\
+\end{vmatrix}$$
+
+环流量是单位时间内环绕某个曲线的量
+旋度是环流量强度
+其方向符合右手定则
+
+#### Laplace operator $\Delta$
+拉普拉斯算子为梯度$\nabla$的散度$\nabla\cdot$
+对于标量场函数$F$
+$\Delta F=\nabla\cdot\nabla F=(\frac{\partial}{\partial x_1},\frac{\partial}{\partial x_2},\dots,\frac{\partial}{\partial x_n})\cdot(\frac{\partial F}{\partial x_1},\frac{\partial F}{\partial x_2},\dots,\frac{\partial F}{\partial x_n})=\sum_{i=1}^n\frac{\partial^2 F}{\partial x_i^2}$
+
+advection
+projection
+Velocity-pressure formula(速度-压力型式N-S)
+Velocity-vorticity formula(速度-旋度型式N-S):涡方法
+$$\nabla \cdot (\nabla p)=\Delta p=\frac{\rho}{\Delta t}\nabla\cdot \boldsymbol{u}$$
+Poisson's equation:
+$$\Delta p=f$$
+Laplace's equation:
+$$\Delta p=0$$
+Some simple explicit time integration schemes
+* Forward Euler("RK1")
+$$\rm{p-=dt*velocity(p)}$$
+* Explicit Midpoint("RK2")
+$$\rm{p\_mid=p-0.5*dt*velocity(p)}$$
+
+$$\rm{p-=dt*velocity(p\_mid)}$$
+* RK3
+$$\begin{aligned}
+    v1&=velocity(p)\\
+    p1&=p-0.5*dt*v1\\
+    v2&=velocity(p1)\\
+    p2&=p-0.75*dt*v2\\
+    v3&=velocity(p2)\\
+    p&-=dt*(2/9*v1+1/3*v2+4/9*v3)
+\end{aligned}$$
+![](Taichi_images/10algs.png)
+
+### 1.2.4. Poisson's Equation and Fast Method
+快速多级展开算法(fast multipole method [fmm])
+Tree code(Burnus hut)
+multipole localpole
+M2M Transform
+M2L
+L2L
+
+math.nyu.edu/faulty/greengar/shortcourse_fmm.pdf
+
+Boundary element method
+
+Other fast summation methods:
+* PPPM: Combining PDE form and summation forms
+* Kernel Independent FMM
+
+![](Taichi_images/fmm_summation.png)
+
+## Linear FEM and Topology optimization
+### FEM overview
+It belongs to the family of Galerkin methods.
+- Convert strong (accurate at every point) to weak form
+- Integrate by parts
+- Use divergence theorem to simplify equations and enforce Neumann boundary conditions
+- Discretization (build stiffness matrix and right-hand side)
+- Solve the linear system
+
+### Discretizing Poisson's equation
+#### 2D Poisson's equation
+$\nabla\cdot\nabla u=0$
+
+Dirichlet boundary: displacement(第一类边界条件)
+$u(x)=f(x)$
+Neumann boundary: some kind of force(第二类边界条件)
+$\nabla u(x)\cdot \boldsymbol{n}=g(x)$
+#### Weak formulation
+Arbitrary 2D test function $w(x)$:
+$\nabla\cdot\nabla u=0 \Leftrightarrow \forall w,\iint_\Omega w(\nabla\cdot\nabla u)dA=0$
+#### Getting rid of second-order terms
+We want to get rid of $\nabla\cdot\nabla$ in $\nabla\cdot\nabla u=0$.
+Integrate by parts:
+$\nabla w\cdot\nabla u+w\nabla\cdot\nabla u=\nabla\cdot(w\nabla u)$
+Since $\nabla\cdot\nabla u=0$, we have
+$\nabla w\cdot\nabla u=\nabla\cdot(w\nabla u)$
+Thus we have
+$\nabla\cdot\nabla u=0 \Leftrightarrow \forall w, \iint_\Omega\nabla w\cdot \nabla u\, dA=\iint_\Omega\nabla\cdot(w\nabla u)dA$.
+Apply divergence theorem to RHS(right-hand side)
+$\iint_\Omega\nabla w\cdot \nabla u\, dA=\oint_{\partial \Omega} w\nabla u\cdot d\boldsymbol{n}$
+
+#### Discretization
+We represent $u(x)$ as 
+$u(x)=\sum_j u_j \phi_j(x)$
+Substitute this into the former equation
+$\forall w, \iint_\Omega\nabla w\cdot \nabla (\sum_j u_j \phi_j)\, dA=\oint_{\partial \Omega} w\nabla u\cdot d\boldsymbol{n}$
+We also use basis function $\phi_i$ as the test function $w$, and we have
+$\forall i, \iint_\Omega\nabla \phi_i\cdot \nabla (\sum_j u_j \phi_j)\, dA=\oint_{\partial \Omega} \phi_i\nabla u\cdot d\boldsymbol{n}$
+Extract $\sum_j u_j$ out of $\iint$
+$\forall i, \sum_j(\iint_\Omega\nabla \phi_i\cdot \nabla \phi_j\, dA)u_j=\oint_{\partial \Omega} \phi_i\nabla u\cdot d\boldsymbol{n}$
+In matrix form
+$\boldsymbol{Ku=f}$
+
+- Dirichlet BCs $u(x)=f(x), x\in \partial\Omega$:
+set $u_i=f(x_i)$
+- Neumann BCs $\nabla u(x)\cdot\boldsymbol{n}=g(x),x\in\partial\Omega$: 
+Plug g into the RHS of the equation, which yields non-zeros in $\boldsymbol{f}$. (Some kind of force)
+### Discretizing linear elasticity
+#### Linear elasticity FEM
+Cauchy momentum equation
+$\frac{Dv}{Dt}=\frac{1}{\rho}\nabla\cdot\sigma+g$
+v: velocity
+$\rho$: density
+$\sigma$: cauchy stress tensor
+g: body force
+
+For quasi-static state($v=0$), constant density, no gravity:
+$\nabla\cdot\sigma=0$
+#### Index notation
+$\frac{Dv}{Dt}=\frac{1}{\rho}\nabla\cdot\sigma+g \Leftrightarrow \frac{Dv_\alpha}{Dt}=\frac{1}{\rho}\sum_\beta \sigma_{\alpha\beta,\beta}+g_\alpha$
+#### Discretize Cauchy momentum equation using FEM
+$\forall\alpha\forall i, \iint_\Omega\sum_\beta[\sigma(u(x))]_{\alpha\beta}\phi_{i\alpha}(x)dA=\oint_{\partial\Omega}\sum_\beta(\sigma_{\alpha\beta}\phi_{i\alpha}dn_\beta)$
+#### Building the linear system
+If $\sigma$ is a linear function of $u$,
+$Ku=f$ can be explicitly expressed.
+
+### Topology optimization
+simp(Solid Isotropic Material with Penalization) 
+oc(Optimility Criterion)
+minimize deformation energy
+
+The most common topology optimization problem is minimal compliance:
+$$
+\begin{aligned}
+  \min\quad L(\rho)&=u^TK(\rho)u\\
+  s.t. \quad K(\rho)u&=f\\
+  \sum_e \rho_e&\leq cV\\
+  \rho_e&\in [\rho_{\min},1]\\
+\end{aligned}
+$$
+
+$L$: measure of deformation energy, or the loss function
+$c$: volume fraction ($c \in (0,1]$)
+$\rho_e$: material occupancy of cell $e$ (0=empty, 1=filled, $\rho$ is usually $10^{-2}$ or $10^{-3}$.)
+$V$: total volume
+
 
 
