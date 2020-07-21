@@ -46,11 +46,15 @@
       - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
       - [Building the linear system](#building-the-linear-system)
     - [Topology optimization](#topology-optimization)
+  - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
+    - [Particle-in-cell (PIC)](#particle-in-cell-pic)
+    - [Material Point Method (MPM)](#material-point-method-mpm)
 
 <!-- /code_chunk_output -->
 
 ## Taichi language
-
+==Decouple== data structure from computation.
+stencil: 模板
 
 ## Taichi syntax basics
 The gene of Taichi is parallel computing.
@@ -502,6 +506,55 @@ $L$: measure of deformation energy, or the loss function
 $c$: volume fraction ($c \in (0,1]$)
 $\rho_e$: material occupancy of cell $e$ (0=empty, 1=filled, $\rho$ is usually $10^{-2}$ or $10^{-3}$.)
 $V$: total volume
+
+## Hybrid Eulerian-Lagrangian
+A fluid solver usually has 2 components:
+- Advection (evolving the fields)
+- Projection (enforcing incompressibility)
+
+Eulerian grid is good at projection. (the grids are fixed and is suitable for searching for neighbors)
+Lagrangian particles are good at advection. (just move the particles)
+
+Combine them together where lagrangian particles stores most of the information while eulerian grids is auxiliary.
+
+### Particle-in-cell (PIC)
+Use particles to carry information while grid as the framework.
+
+P2G (particle to grid): transfer info from particles to grids using kernel functions (scatter).
+
+G2P (grid to particle): transfer info from grid to particle (gather).
+
+Energy dissipation is obvious. Why??
+DOF is lost during G2P.
+
+2 solutions:
+- Transfer more information (rotation...): APIC,PolyPIC
+**APIC**[affine particle in cell] + bilibili video
+**highly recommended for homework**
+**PolyPIC**[polynomial particle in cell]
+- Transfer the delta: FLIP
+**FLIP**[fluid implicit particles]
+gather $\Delta$ of the physical quantities rather than themselves.
+PIC: $v_p^{t+1}=gather(v_i^{t+1})$
+FLIP: $v_p^{t+1}=gather(v_i^{t+1}-v_i^{t})$
+PIC is dissipative while FLIP is too noisy.
+Combine!! $\Rightarrow$ FLIP0.99=FLIP * 0.99+PIC * 0.01
+
+PIC is almost never used in graphics.
+APIC is suggested to start with.
+
+
+### Material Point Method (MPM)
+
+**MLS-MPM** (Moving Least Squares MPM)
+Easier to implement than traditional MPM.
+Based on APIC.
+> ti example mpm88/99/128
+
+
+
+
+
 
 
 
