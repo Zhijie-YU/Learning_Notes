@@ -1,9 +1,9 @@
-# Taichi {ignore=True}
+# Taichi
 <!-- @import "[TOC]" {cmd="toc" depthFrom=2 depthTo=5 orderedList=false} -->
 
 <!-- code_chunk_output -->
 
-- [Taichi {ignore=True}](#taichi-ignoretrue)
+- [Taichi](#taichi)
   - [Taichi language](#taichi-language)
   - [Taichi syntax basics](#taichi-syntax-basics)
     - [Data format](#data-format)
