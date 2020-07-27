@@ -54,7 +54,10 @@
 
 ## Taichi language
 ==Decouple== data structure from computation.
-stencil: 模板
+stencil
+Spatial sparsity is specially treated in taichi. Different data structures can be used to process this sparsity in the compiler.
+Single program multiple data (SPMD)
+Data structure: array of structure(AOS) & structure of array(SOA)
 
 ## Taichi syntax basics
 The gene of Taichi is parallel computing.

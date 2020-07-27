@@ -144,7 +144,7 @@ $$
 0 & -n_z & n_y\\ n_z & 0 & -n_x\\ -n_y & n_x & 0   
 \end{pmatrix}
 $$
-This formula only applies for an axis with the origin as the starting point of the axis $\mathbf{n}$, for other axes we can translate, rotate and the translate.
+This formula only applies for an axis with the origin as the starting point of the axis $\mathbf{n}$, for other axes we can translate, rotate and then translate.
   
 四元数(quaternions)？？？主要用于旋转插值的处理，未详细展开
 $Q=a + b \rm i + c \rm j + d \rm k$
@@ -165,7 +165,7 @@ $$
     &R_{-\theta} \cdot R_\theta = I \Rightarrow R_{-\theta} = R^{-1}_\theta \\ &\Rightarrow R^T_\theta=R^{-1}_\theta
 \end{aligned}
 $$
-Rotation matrix is a orthogonal matrix!
+Rotation matrix is an orthogonal matrix!
 
 ### Viewing transformation
 Consider how to take a photo
@@ -230,4 +230,17 @@ What is on earth perspective projection?
 Why transform to a canonical cuboid in the end???
 
 What is the change of the point inside the frustum in z direction? nearer or farther??
+
+#### Canonical cube to screen
+
+### Rasterization (光栅化)
+#### Sampling (采样)
+Determine whether a point is inside a triangle.
+![](CG_images/cross_product.png)
+$\overrightarrow{AB}\times\overrightarrow{AP}\qquad\overrightarrow{BC}\times\overrightarrow{BP}\qquad\overrightarrow{CA}\times\overrightarrow{CP}$
+如果以上三项同号，说明点P同时在三条边的左侧/右侧，即点P在$\Delta ABC$内部，否则即在外部。
+
+平面上的三角形光栅化可以先划出包围盒bounding box，在此范围内对各点用该方法进行判断。
+
+#### Anti-aliasing (抗锯齿)
 

@@ -74,7 +74,7 @@ def print_tensor_size(x: ti.template ()):
         print(x.shape ()[i])
 print_tensor_size(tensor)
 '''
-
+'''
 x1 = -2
 y1 = 0
 x2 = 3
@@ -108,4 +108,8 @@ else:
         g = g2
 x0 = (y0 - y3)/g + x3
 print(x0)
+'''
 
+import numpy as np
+a = np.zeros((3,3))
+print(np.max(a[0]))
