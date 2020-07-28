@@ -112,4 +112,15 @@ print(x0)
 
 import numpy as np
 a = np.zeros((3,3))
-print(np.max(a[0]))
+for i in range(3):
+    if a[i,2] == 0:
+        a[i,2] = 1
+        print(type(a[0,0]))
+print(a)
+
+test = np.array([[-3, 1, 2], [4, 0, 2], [4, 2, 0]], dtype=np.float64)
+
+for i in range(3):
+    if test[i, 2] == 0:
+        test[i,2] = 0.1
+print(test)

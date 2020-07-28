@@ -32,7 +32,7 @@
       - [Divergence](#divergence)
       - [Curl](#curl)
       - [Laplace operator $\Delta$](#laplace-operator-math-xmlnshttpwwww3org1998mathmathmlsemanticsmrowmi-mathvariantnormalδmimrowannotation-encodingapplicationx-texdeltaannotationsemanticsmathδ)
-    - [1.2.4. Poisson's Equation and Fast Method](#124-poissons-equation-and-fast-method)
+    - [Poisson's Equation and Fast Method](#poissons-equation-and-fast-method)
   - [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
     - [FEM overview](#fem-overview)
     - [Discretizing Poisson's equation](#discretizing-poissons-equation)
@@ -49,6 +49,10 @@
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC)](#particle-in-cell-pic)
     - [Material Point Method (MPM)](#material-point-method-mpm)
+      - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
+      - [Constitutive Models](#constitutive-models)
+      - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
+      - [Introducing Taichi "field"](#introducing-taichi-field)
 
 <!-- /code_chunk_output -->
 
@@ -288,6 +292,8 @@ Popular hyperelastic material models (for each element)
   * $\psi(\mathbf{F})=\frac{\mu}{2}\sum_i[(\mathbf{F}^T\mathbf{F})_{ii}-1]-\mu\log(J)+\frac{\lambda}{2}\log^2(J)$
   * $\mathbf{P}(\mathbf{F})=\frac{\partial\psi(\mathbf{F})}{\partial\mathbf{F}}=2\mu(\mathbf{F}-\mathbf{R})+\lambda(J-1)J\mathbf{F}^{-T}$
 * (Fixed) Corotated
+  * $\psi(\mathbf{F})=\mu\sum_i(\mathbf{\sigma}_i-1)^2+\frac{\lambda}{2}(J-1)^2$
+  * $\mathbf{P}(\mathbf{F})=\frac{\partial \psi}{\partial \mathbf{F}}=2\mu(\mathbf{F}-\mathbf{R})+\lambda(J-1)J\mathbf{F}^{-T}$
 
 **FEM**
 Linear tetrahedral FEM
@@ -406,7 +412,7 @@ $$\begin{aligned}
 \end{aligned}$$
 ![](Taichi_images/10algs.png)
 
-### 1.2.4. Poisson's Equation and Fast Method
+### Poisson's Equation and Fast Method
 快速多级展开算法(fast multipole method [fmm])
 Tree code(Burnus hut)
 multipole localpole
@@ -414,7 +420,7 @@ M2M Transform
 M2L
 L2L
 
-math.nyu.edu/faulty/greengar/shortcourse_fmm.pdf
+[shortcourse_fmm](https://math.nyu.edu/faculty/greengar/shortcourse_fmm.pdf)
 
 Boundary element method
 
@@ -520,6 +526,8 @@ Lagrangian particles are good at advection. (just move the particles)
 
 Combine them together where lagrangian particles stores most of the information while eulerian grids is auxiliary.
 
+![](Taichi_images/hybridEL.png)
+
 ### Particle-in-cell (PIC)
 Use particles to carry information while grid as the framework.
 
@@ -548,14 +556,60 @@ APIC is suggested to start with.
 
 
 ### Material Point Method (MPM)
+No elements in MPM.
+MPM particles => FEM quadrature points (Gaussian points)
+MPM equations are derived using weak formulation.
+#### MLS-MPM (Moving Least Squares MPM)
+use MLS shape function in MPM
 
-**MLS-MPM** (Moving Least Squares MPM)
 Easier to implement than traditional MPM.
 Based on APIC.
 > ti example mpm88/99/128
 
+$i$ => grid, $p$ => particle
+For APIC (Some errors in P2G)
+![](Taichi_images/apic.png)
+The main different lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
 
+For MLS-MPM
+![](Taichi_images/mls_mpm.png)
 
+Enforcing boundary conditions (BC)
+Sticky: $\boldsymbol{v}_i^{n+1}=\boldsymbol{0}$
+Slip: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1})$
+Separate: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}\cdot\min(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1},0)$
+
+#### Constitutive Models
++ Fluid: Equation-of-States (EOS)
++ Elastoplastic objects (snow, sand etc.): Yield criteria
++ PK1 stress ...
+
+Elastic solids
+PK1 stresses of hyperelastic models:
++ Neo-Hookean
++ (Fixed) Corotated
+
+Weakly compressible fluids
+
+Elastoplastic solids
+
+Singular value decomposition (SVD)
+Every real matrix $M_{n\times m}$ can be decomposed into $M_{n\times m}=U_{n\times n}\sum_{n\times m}V_{m\times m}$
+U,V => rotation
+$\sum$ => streching
+
+#### Lagrangian forces in MPM
+Treat MPM particles as FEM vertices, and use FEM potential energy model. A triangular mesh is needed.
+
+#### Introducing Taichi "field"
+New feature in 0.6.22
+Use "field" instead of "tensor" since Taichi v0.6.22.
+ti.tensor, ti.var are deprecated with "field".
+
+ti.var => ti.field(dt=f32, shape=[]) -> a[None]
+ti.tensor => ti.field(dt=f32, shape=[256,256])
+
+"field" refers to global variable.
 
 
 
