@@ -109,7 +109,7 @@ else:
 x0 = (y0 - y3)/g + x3
 print(x0)
 '''
-
+'''
 import numpy as np
 a = np.zeros((3,3))
 for i in range(3):
@@ -124,3 +124,51 @@ for i in range(3):
     if test[i, 2] == 0:
         test[i,2] = 0.1
 print(test)
+
+print(np.tan(75*np.pi/180))
+'''
+'''
+import taichi as ti
+import numpy as np
+
+ti.init(arch=ti.cpu)
+dim = 2
+n_particles = 2
+x = ti.Vector(dim, dt=ti.f32, shape=n_particles)
+
+@ti.kernel
+def reset(mode: ti.i32):
+    for i in range(n_particles):
+        x[i] = [ti.random() * 0.6 + 0.2, ti.random() * 0.6 + 0.2]
+    print(ti.random())
+
+
+reset(1)
+'''
+
+import taichi as ti
+
+ti.init()
+
+pixels = ti.var(ti.u8, shape=(512, 512, 3))
+
+@ti.kernel
+def paint():
+    for i, j, k in pixels:
+        pixels[i, j, k] = ti.random() * 255
+
+result_dir = "./results"
+video_manager = ti.VideoManager(output_dir=result_dir, framerate=24, automatic_build=False)
+
+for i in range(50):
+    paint()
+
+    pixels_img = pixels.to_numpy()
+    video_manager.write_frame(pixels_img)
+    print(f'\rFrame {i+1}/50 is recorded', end='')
+
+print()
+print('Exporting .mp4 and .gif videos...')
+video_manager.make_video(gif=True, mp4=True)
+print(f'MP4 video is saved to {video_manager.get_output_filename(".mp4")}')
+print(f'GIF video is saved to {video_manager.get_output_filename(".gif")}')

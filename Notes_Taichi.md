@@ -3,56 +3,61 @@
 
 <!-- code_chunk_output -->
 
-- [Taichi](#taichi)
-  - [Taichi language](#taichi-language)
-  - [Taichi syntax basics](#taichi-syntax-basics)
-    - [Data format](#data-format)
-    - [Kernel and function](#kernel-and-function)
-    - [For loops](#for-loops)
-    - [Atomic operations](#atomic-operations)
-    - [Scope](#scope)
-    - [Phases of a Taichi program](#phases-of-a-taichi-program)
-    - [Debug mode](#debug-mode)
-  - [Lagrangian and Eulerian View](#lagrangian-and-eulerian-view)
-    - [Lagrangian simulation approaches (1)](#lagrangian-simulation-approaches-1)
-      - [Mass-spring system](#mass-spring-system)
-      - [Time integration](#time-integration)
-      - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
-      - [Lagrangian fluid simulation: Smoothed particle hydrodynamics(SPH)](#lagrangian-fluid-simulation-smoothed-particle-hydrodynamicssph)
-      - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
-    - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
-      - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
-      - [Taichi programming language advanced features](#taichi-programming-language-advanced-features)
-        - [ODOP](#odop)
-        - [Metaprogramming](#metaprogramming)
-        - [Differentiable programming](#differentiable-programming)
-        - [Visualization](#visualization)
-    - [Eulerian Fluid Simulation](#eulerian-fluid-simulation)
-      - [Gradient](#gradient)
-      - [Divergence](#divergence)
-      - [Curl](#curl)
-      - [Laplace operator $\Delta$](#laplace-operator-math-xmlnshttpwwww3org1998mathmathmlsemanticsmrowmi-mathvariantnormalδmimrowannotation-encodingapplicationx-texdeltaannotationsemanticsmathδ)
-    - [Poisson's Equation and Fast Method](#poissons-equation-and-fast-method)
-  - [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
-    - [FEM overview](#fem-overview)
-    - [Discretizing Poisson's equation](#discretizing-poissons-equation)
-      - [2D Poisson's equation](#2d-poissons-equation)
-      - [Weak formulation](#weak-formulation)
-      - [Getting rid of second-order terms](#getting-rid-of-second-order-terms)
-      - [Discretization](#discretization)
-    - [Discretizing linear elasticity](#discretizing-linear-elasticity)
-      - [Linear elasticity FEM](#linear-elasticity-fem)
-      - [Index notation](#index-notation)
-      - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
-      - [Building the linear system](#building-the-linear-system)
-    - [Topology optimization](#topology-optimization)
-  - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
-    - [Particle-in-cell (PIC)](#particle-in-cell-pic)
-    - [Material Point Method (MPM)](#material-point-method-mpm)
-      - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
-      - [Constitutive Models](#constitutive-models)
-      - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
-      - [Introducing Taichi "field"](#introducing-taichi-field)
+- [Taichi language](#taichi-language)
+- [Taichi syntax basics](#taichi-syntax-basics)
+  - [Data format](#data-format)
+  - [Kernel and function](#kernel-and-function)
+  - [For loops](#for-loops)
+  - [Atomic operations](#atomic-operations)
+  - [Scope](#scope)
+  - [Phases of a Taichi program](#phases-of-a-taichi-program)
+  - [Debug mode](#debug-mode)
+- [Lagrangian and Eulerian View](#lagrangian-and-eulerian-view)
+  - [Lagrangian simulation approaches (1)](#lagrangian-simulation-approaches-1)
+    - [Mass-spring system](#mass-spring-system)
+    - [Time integration](#time-integration)
+    - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
+    - [Lagrangian fluid simulation: Smoothed particle hydrodynamics(SPH)](#lagrangian-fluid-simulation-smoothed-particle-hydrodynamicssph)
+    - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
+  - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
+    - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
+    - [Taichi programming language advanced features](#taichi-programming-language-advanced-features)
+      - [ODOP](#odop)
+      - [Metaprogramming](#metaprogramming)
+      - [Differentiable programming](#differentiable-programming)
+      - [Visualization](#visualization)
+  - [Eulerian Fluid Simulation](#eulerian-fluid-simulation)
+    - [Gradient](#gradient)
+    - [Divergence](#divergence)
+    - [Curl](#curl)
+    - [Laplace operator $\Delta$](#laplace-operator-delta)
+  - [Poisson's Equation and Fast Method](#poissons-equation-and-fast-method)
+- [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
+  - [FEM overview](#fem-overview)
+  - [Discretizing Poisson's equation](#discretizing-poissons-equation)
+    - [2D Poisson's equation](#2d-poissons-equation)
+    - [Weak formulation](#weak-formulation)
+    - [Getting rid of second-order terms](#getting-rid-of-second-order-terms)
+    - [Discretization](#discretization)
+  - [Discretizing linear elasticity](#discretizing-linear-elasticity)
+    - [Linear elasticity FEM](#linear-elasticity-fem)
+    - [Index notation](#index-notation)
+    - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
+    - [Building the linear system](#building-the-linear-system)
+  - [Topology optimization](#topology-optimization)
+- [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
+  - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
+  - [Material Point Method (MPM)](#material-point-method-mpm)
+    - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
+    - [Constitutive Models](#constitutive-models)
+    - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
+    - [Introducing Taichi "field"](#introducing-taichi-field)
+- [High performance physical simulation](#high-performance-physical-simulation)
+  - [Hardware Architecture](#hardware-architecture)
+    - [Background](#background)
+    - [Locality](#locality)
+  - [Advanced Taichi Programming](#advanced-taichi-programming)
+    - [Structural Nodes (SNodes)](#structural-nodes-snodes)
 
 <!-- /code_chunk_output -->
 
@@ -524,19 +529,24 @@ A fluid solver usually has 2 components:
 Eulerian grid is good at projection. (the grids are fixed and is suitable for searching for neighbors)
 Lagrangian particles are good at advection. (just move the particles)
 
-Combine them together where lagrangian particles stores most of the information while eulerian grids is auxiliary.
+Combine them together where lagrangian particles store most of the information while eulerian grids are auxiliary.
 
 ![](Taichi_images/hybridEL.png)
 
-### Particle-in-cell (PIC)
+### Particle-in-cell (PIC/APIC/FLIP)
 Use particles to carry information while grid as the framework.
 
 P2G (particle to grid): transfer info from particles to grids using kernel functions (scatter).
 
-G2P (grid to particle): transfer info from grid to particle (gather).
+G2P (grid to particle): transfer info from grid to particle (gather). [Angular momentum is not conserved.]
 
-Energy dissipation is obvious. Why??
-DOF is lost during G2P.
+The particles interact with each other through grids.
+
+$p$ refers to particle and $i$ refers to grid.
+
+:dog: Energy dissipation (numerical diffusion) is obvious.
+DOF is lost during G2P??.
+DOFs of particles are lost in P2G=>G2P since typically the number of particles is much more than that of grids. In G2P, particle velocities are totally overwritten from grids thus some information of particles is lost. In FLIP, the particle velocities are incremented rather than overwritten.
 
 2 solutions:
 - Transfer more information (rotation...): APIC,PolyPIC
@@ -547,12 +557,190 @@ DOF is lost during G2P.
 **FLIP**[fluid implicit particles]
 gather $\Delta$ of the physical quantities rather than themselves.
 PIC: $v_p^{t+1}=gather(v_i^{t+1})$
-FLIP: $v_p^{t+1}=gather(v_i^{t+1}-v_i^{t})$
+FLIP: $v_p^{t+1}=v_p^t+gather(v_i^{t+1}-v_i^{t})$
 PIC is dissipative while FLIP is too noisy.
 Combine!! $\Rightarrow$ FLIP0.99=FLIP * 0.99+PIC * 0.01
 
+To know more about **APIC** and its difference with **PIC** and **FLIP**, refer to *An angular momentum conserving affine-particle-in-cell method (2017JCP)*.
+**PIC** loses information during the mapping cycle P2G/G2P thus energy dissipation occurs.
+**FLIP** transfers incremental information during cycle and preserves each particle's original information to some extent however too much noise occurs.
+**APIC** transfers more information like velocity gradient matrix thus the energy dissipation can be avoided to some extent.
+
 PIC is almost never used in graphics.
 APIC is suggested to start with.
+
+```py
+# pic_vs_apic.py
+# In this program, initial velocities is given. How to enforce forces?
+import taichi as ti
+import random
+ti.init(arch=ti.gpu)
+
+dim = 2
+n_particles = 8192
+# number of grid points along each axis
+n_grid = 32
+dx = 1 / n_grid
+inv_dx = 1 / dx
+dt = 2.0e-3
+use_apic = False
+
+# coordinates of particles
+x = ti.Vector.field(dim, dtype=ti.f32, shape=n_particles)
+# velocities of particles
+v = ti.Vector(dim, dt=ti.f32, shape=n_particles)
+C = ti.Matrix(dim, dim, dt=ti.f32, shape=n_particles)
+grid_v = ti.Vector(dim, dt=ti.f32, shape=(n_grid, n_grid))
+#grid_m = ti.var(dt=ti.f32, shape=(n_grid, n_grid))
+grid_m = ti.field(dtype=ti.f32, shape=(n_grid, n_grid))
+
+@ti.func
+def clamp_pos(pos):
+    return ti.Vector([max(min(0.95, pos[0]), 0.05), max(min(0.95, pos[1]), 0.05)])
+
+@ti.kernel
+def substep_PIC():
+    # P2G
+    for p in x:
+        # create a local coordinate system, base as the origin
+        base = (x[p] * inv_dx - 0.5).cast(int)
+        fx = x[p] * inv_dx - base.cast(float)
+        # Quadratic B-spline (quadratic kernel)
+        # assume particle mass is 1.
+        w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
+        for i in ti.static(range(3)):
+            for j in ti.static(range(3)):
+                offset = ti.Vector([i, j])
+                weight = w[i][0] * w[j][1]
+                grid_v[base + offset] += weight * v[p]
+                grid_m[base + offset] += weight
+    # Grid normalization
+    for i, j in grid_m:
+        if grid_m[i, j] > 0:
+            inv_m = 1 / grid_m[i, j]
+            grid_v[i, j] = inv_m * grid_v[i, j]
+    # G2P
+    for p in x:
+        base = (x[p] * inv_dx - 0.5).cast(int)
+        fx = x[p] * inv_dx - base.cast(float)
+        # Quadratic B-spline
+        w = [
+            0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
+        ]
+        new_v = ti.Vector.zero(ti.f32, 2)
+        for i in ti.static(range(3)):
+            for j in ti.static(range(3)):
+                weight = w[i][0] * w[j][1]
+                new_v += weight * grid_v[base + ti.Vector([i, j])]
+
+        x[p] = clamp_pos(x[p] + v[p] * dt)
+        v[p] = new_v
+
+@ti.kernel
+def substep_APIC():
+    for p in x:
+        base = (x[p] * inv_dx - 0.5).cast(int)
+        fx = x[p] * inv_dx - base.cast(float)
+        # Quadratic B-spline
+        w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
+        affine = C[p]
+        for i in ti.static(range(3)):
+            for j in ti.static(range(3)):
+                offset = ti.Vector([i, j])
+                dpos = (offset.cast(float) - fx) * dx
+                weight = w[i][0] * w[j][1]
+                grid_v[base + offset] += weight * (v[p] + affine @ dpos)
+                grid_m[base + offset] += weight
+    
+    for i, j in grid_m:
+        if grid_m[i, j] > 0:
+            inv_m = 1 / grid_m[i, j]
+            grid_v[i, j] = inv_m * grid_v[i, j]
+    
+    for p in x:
+        base = (x[p] * inv_dx - 0.5).cast(int)
+        fx = x[p] * inv_dx - base.cast(float)
+        # Quadratic B-spline
+        w = [
+            0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
+        ]
+        new_v = ti.Vector.zero(ti.f32, 2)
+        new_C = ti.Matrix.zero(ti.f32, 2, 2)
+        for i in ti.static(range(3)):
+            for j in ti.static(range(3)):
+                # the dx in dpos is eliminated in the computation of new_C!!
+                dpos = ti.Vector([i, j]).cast(float) - fx
+                g_v = grid_v[base + ti.Vector([i, j])]
+                weight = w[i][0] * w[j][1]
+                new_v += weight * g_v
+                # where is dx^2 ?? only 1 inv_dx is presented here!!
+                # the other dx is eliminated with that in dpos.
+                new_C += 4 * weight * g_v.outer_product(dpos) * inv_dx
+
+        x[p] = clamp_pos(x[p] + new_v * dt)
+        v[p] = new_v
+        C[p] = new_C
+
+@ti.kernel
+def reset(mode: ti.i32):
+    for i in range(n_particles):
+        x[i] = [ti.random() * 0.6 + 0.2, ti.random() * 0.6 + 0.2]
+        if mode == 0:
+            v[i] = [1, 0]
+        elif mode == 1:
+            v[i] = [x[i][1] - 0.5, 0.5 - x[i][0]]
+        elif mode == 2:
+            v[i] = [0, x[i][0] - 0.5]
+        else:
+            v[i] = [0, x[i][1] - 0.5]
+        
+reset(1)
+
+gui = ti.GUI("PIC v.s. APIC", (512, 512))
+for frame in range(2000000):
+    if gui.get_event(ti.GUI.PRESS):
+        if gui.event.key == 't': reset(0)
+        elif gui.event.key == 'r': reset(1)
+        elif gui.event.key == 's': reset(2)
+        elif gui.event.key == 'd': reset(3)
+        elif gui.event.key in [ti.GUI.ESCAPE, ti.GUI.EXIT]: break
+        elif gui.event.key == 'a': use_apic = not use_apic
+    for s in range(10):
+        grid_v.fill([0, 0])
+        grid_m.fill(0)
+        if use_apic:
+            substep_APIC()
+        else:
+            substep_PIC()
+    scheme = 'APIC' if use_apic else 'PIC'
+    gui.clear(0x112F41)
+    gui.text('(D) Reset as dilation', pos=(0.05, 0.25))
+    gui.text('(T) Reset as translation', pos=(0.05, 0.2))
+    gui.text('(R) Reset as rotation', pos=(0.05, 0.15))
+    gui.text('(S) Reset as shearing', pos=(0.05, 0.1))
+    gui.text(f'(A) Scheme={scheme}', pos=(0.05, 0.05))
+    gui.circles(x.to_numpy(), radius=3, color=0x068587)
+    gui.show()
+```
+
+<div align=center><img src="Taichi_images/APIC_pg.png" width="50%" height="50%"></div>
+
+For both PIC and APIC codes, information transfer occurs between each particle ($p$) and its surrounding 9 grid points ($i$). In this figure, each particle inside the green rectangle intersects with the other 9 points with the **kernel function**, which is defined on grid points.
+![](Taichi_images/PICkernel.png)
+During P2G and G2P cycle, the velocity is kind of smoothed and energy dissipation occurs.
+
+APIC conserves angular momentum!
+**Angular momentum conservation (角动量守恒)**
+Angular momentum (角动量): $m\mathbf{r}\times \mathbf{v}$
+Moment (力矩): $\mathbf{r}\times\mathbf{F}$
+其中$\mathbf{r}$为位置矢量。
+角动量守恒条件：合力矩为0
+根本在于$\mathbf{F}=m\mathbf{a} \Rightarrow \mathbf{r}\times\mathbf{F}=m\mathbf{r}\times\mathbf{a}$
+如果合力矩为0，则速度保持不变，角动量恒定
+
+动量守恒，角动量守恒都源于牛顿第二定律。
+
+合力矩和角动量的关系可以类比合力与动量的关系。
 
 
 ### Material Point Method (MPM)
@@ -566,10 +754,10 @@ Easier to implement than traditional MPM.
 Based on APIC.
 > ti example mpm88/99/128
 
-$i$ => grid, $p$ => particle
+$i$ => grid node, $p$ => particle
 For APIC (Some errors in P2G)
 ![](Taichi_images/apic.png)
-The main different lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
+The main difference lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
 
 For MLS-MPM
 ![](Taichi_images/mls_mpm.png)
@@ -594,24 +782,70 @@ Weakly compressible fluids
 Elastoplastic solids
 
 Singular value decomposition (SVD)
-Every real matrix $M_{n\times m}$ can be decomposed into $M_{n\times m}=U_{n\times n}\sum_{n\times m}V_{m\times m}$
+Every real matrix $M_{n\times m}$ can be decomposed into $M_{n\times m}=U_{n\times n}\Sigma_{n\times m}V_{m\times m}^T$
 U,V => rotation
-$\sum$ => streching
+$\Sigma$ => streching
+
+Diagonal entries $\sigma_{i}=\Sigma_{ii}$ are called singular values.
 
 #### Lagrangian forces in MPM
 Treat MPM particles as FEM vertices, and use FEM potential energy model. A triangular mesh is needed.
+> ti example mpm_lagrangian_forces
 
 #### Introducing Taichi "field"
 New feature in 0.6.22
 Use "field" instead of "tensor" since Taichi v0.6.22.
 ti.tensor, ti.var are deprecated with "field".
 
-ti.var => ti.field(dt=f32, shape=[]) -> a[None]
-ti.tensor => ti.field(dt=f32, shape=[256,256])
+ti.var => ti.field(dtype=f32, shape=[]) -> a[None]
+ti.tensor => ti.field(dtype=f32, shape=[256,256])
+
 
 "field" refers to global variable.
+ti.Vector.field
+ti.Matrix.field
+
+#### MPM Extension
+Refer to [MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf).
 
 
+
+
+
+## High performance physical simulation
++ Performance from algorithmic improvement (do less work)
++ Performance from low-level programming (do work faster)
+
+### Hardware Architecture
+#### Background
+CPU (=> Page Table & TLB) => L1 Cache(32K) => L2 Cache(256K) => L3 Cache(2M) => Pysical Memory
+Latency(延迟)
+Each CPU core has its own L1, L2 Cache while shares L3 Cache.
+I/O of L1 is faster than L2 and L2 faster than L3.
+
+#### Locality
++ Spatial locality: try to access spatially neighboring data in main memory
++ Temporal locality: reuse the data as much as you can
++ Shrink the working set, so the data resides in lower-level momory
+
+Cachelines
+Caches
+CPU $\mu$Arch: Float-Point Units
++,-,* is faster than /.
+
+CPU/GPU
+
+
+### Advanced Taichi Programming
+#### Structural Nodes (SNodes)
+
+**Dense SNode**
+```py
+# i means x direction and j means y direction
+x = ti.field(dtype = ti.i32)
+ti.root.dense(ti.i,4).place(x)
+ti.root.dense(ti.ij,(4,2)).place(x) <=> ti.root.dense(ti.i,4).dense(ti.j,2).place(x)
+```
 
 
 
