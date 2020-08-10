@@ -346,7 +346,9 @@ mesh = {
 #test = np.array([[10,0,2],[-10,-10,2],[-10,10,2]])/15
 #test = np.array([[-2,1,2],[4,0,2],[4,4,2]])
 #test = np.array([[0, 1, 2], [4, 0, 2], [4, 2, 2]])
-test = np.array([[-3, 1, 2], [4, 0, 2], [4, 2, 0]], dtype=np.float64)
+#test = np.array([[-3, 1, 2], [4, 0, 2], [4, 2, 0]], dtype=np.float64)
+test = np.array([[3, 10, 1], [-3.5, -3, 1.3], [4, -0.5, 2.5]], dtype=np.float64)
+
 
 # z = 0 should be avoided in this method!
 for i in range(3):
