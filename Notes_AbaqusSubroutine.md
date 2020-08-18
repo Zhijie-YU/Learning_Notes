@@ -228,7 +228,7 @@ $$
 $$
 \begin{aligned}
 &I_1(\boldsymbol{S})\equiv\rm{tr}\boldsymbol{S} = \it S_{ii}\\
-&=s_{11}+s_{22}+s_{33}
+&=s_{11}+s_{22}+s_{33}\\&= s_1 + s_2 + s_3
 \end{aligned}
 $$
 
@@ -236,7 +236,8 @@ $$
 $$
 \begin{aligned}
 &I_2(\boldsymbol{S})\equiv\frac{1}{2}[(\rm{tr}\boldsymbol{S})^2-\rm{tr}(\boldsymbol{S}^2)]=\frac{1}{2}\it(S_{ii}S_{jj}-S_{ij}S_{ji})\\
-&=s_{23}^2+s_{31}^2+s_{12}^2-s_{22}s_{33}-s_{33}s_{11}-s_{11}s_{22}
+&=s_{23}^2+s_{31}^2+s_{12}^2-s_{22}s_{33}-s_{33}s_{11}-s_{11}s_{22}\\
+&= s_1s_2 + s_1s_3 + s_2s_3
 \end{aligned}
 $$
 
@@ -244,7 +245,8 @@ $$
 $$
 \begin{aligned}
 &I_3(\boldsymbol{S})\equiv\det\boldsymbol{S}=\frac{1}{6}\epsilon_{ijk}\epsilon_{pqr}S_{ip}S_{jq}S_{kr}\\
-&=2s_{23}s_{31}s_{12}+s_{11}s_{22}s_{33}-s_{11}s_{23}^2-s_{22}s_{31}^2-s_{33}s_{12}^2
+&=2s_{23}s_{31}s_{12}+s_{11}s_{22}s_{33}-s_{11}s_{23}^2-s_{22}s_{31}^2-s_{33}s_{12}^2\\
+&= s_1s_2s_3
 \end{aligned}
 $$
 
@@ -260,6 +262,7 @@ Thus
 |$\epsilon_{ijk}=1$|for an even permutation (eg. 123,231,312)|
 |$\epsilon_{ijk}=-1$|for an odd permutation (eg. 132,213,321)|
 
+Among them, $s_1,s_2,s_3$ are the eigen values of the given tensor.
 
 [$J_2$ invariant of the stress deviator]
 :exclamation:  

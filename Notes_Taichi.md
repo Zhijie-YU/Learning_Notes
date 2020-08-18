@@ -51,6 +51,10 @@
     - [Material Point Method (MPM)](#material-point-method-mpm)
       - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
       - [Constitutive Models](#constitutive-models)
+        - [Elastic solids](#elastic-solids)
+        - [Weakly compressible fluids](#weakly-compressible-fluids)
+        - [Elastoplastic solids](#elastoplastic-solids)
+        - [Singular value decomposition (**SVD**)](#singular-value-decomposition-svd)
       - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
       - [Introducing Taichi "field"](#introducing-taichi-field)
       - [MPM Extension](#mpm-extension)
@@ -60,6 +64,7 @@
       - [Locality](#locality)
     - [Advanced Taichi Programming](#advanced-taichi-programming)
       - [Structural Nodes (SNodes)](#structural-nodes-snodes)
+    - [THE END](#the-end)
 
 <!-- /code_chunk_output -->
 
@@ -297,7 +302,7 @@ $$K=\frac{E}{3(1-2\nu)}\qquad\lambda=\frac{E\nu}{(1+\nu)(1-2\nu)}\qquad\mu=\frac
 Popular hyperelastic material models (for each element)
 * Neo-Hookean
   * $\psi(\mathbf{F})=\frac{\mu}{2}\sum_i[(\mathbf{F}^T\mathbf{F})_{ii}-1]-\mu\log(J)+\frac{\lambda}{2}\log^2(J)$
-  * $\mathbf{P}(\mathbf{F})=\frac{\partial\psi(\mathbf{F})}{\partial\mathbf{F}}=2\mu(\mathbf{F}-\mathbf{R})+\lambda(J-1)J\mathbf{F}^{-T}$
+  * $\mathbf{P}(\mathbf{F})=\frac{\partial\psi(\mathbf{F})}{\partial\mathbf{F}}=\mu(\mathbf{F}-\mathbf{F}^{-T})+\lambda\log(J)\mathbf{F}^{-T}$
 * (Fixed) Corotated
   * $\psi(\mathbf{F})=\mu\sum_i(\mathbf{\sigma}_i-1)^2+\frac{\lambda}{2}(J-1)^2$
   * $\mathbf{P}(\mathbf{F})=\frac{\partial \psi}{\partial \mathbf{F}}=2\mu(\mathbf{F}-\mathbf{R})+\lambda(J-1)J\mathbf{F}^{-T}$
@@ -757,38 +762,62 @@ Based on APIC.
 > ti example mpm88/99/128
 
 $i$ => grid node, $p$ => particle
-For APIC (Some errors in P2G)
+:ghost: For APIC (Some errors in P2G)
 ![](Taichi_images/apic.png)
 The main difference lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
+==Particle velocity gradient $C_p$:== the formula of it here is based on **quadratic** B-Spline kernel function. For Cubic or other kernels, the expression is different. (How to derive??)
+==Incompressible:== 常密度假定，即忽略内能变化，能量守恒表现为动能+势能守恒
 
-For MLS-MPM
+:ghost: For MLS-MPM
 ![](Taichi_images/mls_mpm.png)
+
+> In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\boldsymbol{\psi}}{\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. 
+
+> For MLS-MPM, the main difficulty lies in P2G where Grid momentum is hard to obtain considering constitutive model.
+
+**How to derive grid momentum:**
+![](Taichi_images/nodalForce1.png)
+![](Taichi_images/nodalForce2.png)
 
 Enforcing boundary conditions (BC)
 Sticky: $\boldsymbol{v}_i^{n+1}=\boldsymbol{0}$
 Slip: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1})$
 Separate: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}\cdot\min(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1},0)$
 
+> For boundary condition enforcement:
+> For PIC/APIC, when applying BC to a cube moving in x direction, the cube composed of particles will be compressed without moving in y direction.
+> For MLS-MPM however, the cube will collapse and move in y direction once impeded in x direction. This mainly results from the deformation gradient and constitutive model??
+
 #### Constitutive Models
 + Fluid: Equation-of-States (EOS)
 + Elastoplastic objects (snow, sand etc.): Yield criteria
 + PK1 stress ...
 
-Elastic solids
+##### Elastic solids
 PK1 stresses of hyperelastic models:
 + Neo-Hookean
 + (Fixed) Corotated
+![](Taichi_images/elastic.png)
+For more information, refer to [2016 MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) given by Jiang etc.
 
-Weakly compressible fluids
+##### Weakly compressible fluids
+![](Taichi_images/weakcomp.png)
+![](Taichi_images/cancel.png)
 
-Elastoplastic solids
 
-Singular value decomposition (SVD)
+##### Elastoplastic solids
+![](Taichi_images/elastoplastic.png)
+We can also refer to snow paper.
+
+
+##### Singular value decomposition (**SVD**)
 Every real matrix $M_{n\times m}$ can be decomposed into $M_{n\times m}=U_{n\times n}\Sigma_{n\times m}V_{m\times m}^T$
 U,V => rotation
 $\Sigma$ => streching
 
 Diagonal entries $\sigma_{i}=\Sigma_{ii}$ are called singular values.
+
+![](Taichi_images/svd.png)
 
 #### Lagrangian forces in MPM
 Treat MPM particles as FEM vertices, and use FEM potential energy model. A triangular mesh is needed.
@@ -808,12 +837,15 @@ ti.Vector.field
 ti.Matrix.field
 
 #### MPM Extension
-Refer to [MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf).
+Refer to [MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) and [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf).
 
 Dirichlet boundary (第一类边界条件): 边界上待求变量值已知
 Neumann boundary (第二类边界条件/自然边界条件): 边界上待求变量外法线方向导数确定
 
 Key contribution: MLS-MPM uses MLS shape functions.
+
+Signed distance function (SDF): this function is used to perform inside/outside queries. Different shapes usually have different SDFs.
+For the SDF of any point,  its sign represents the point's relative location and its return value should be the shortest distance between the shape and the given point.
 
 
 
@@ -853,5 +885,15 @@ ti.root.dense(ti.i,4).place(x)
 ti.root.dense(ti.ij,(4,2)).place(x) <=> ti.root.dense(ti.i,4).dense(ti.j,2).place(x)
 ```
 
+### THE END
+Simplicity is good. Complexity is bad.
 
+How to solve a problem is much harder than just used a given approach to solve something.
+
+To make things simple is much harder than make it complex.
+
+MGPCG!!!??? 
+
+Learning for simulation?
+Simulation for learning!
 

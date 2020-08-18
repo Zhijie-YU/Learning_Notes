@@ -145,7 +145,7 @@ def reset(mode: ti.i32):
 
 reset(1)
 '''
-
+'''
 import taichi as ti
 
 ti.init()
@@ -172,3 +172,164 @@ print('Exporting .mp4 and .gif videos...')
 video_manager.make_video(gif=True, mp4=True)
 print(f'MP4 video is saved to {video_manager.get_output_filename(".mp4")}')
 print(f'GIF video is saved to {video_manager.get_output_filename(".gif")}')
+'''
+'''
+import xml.sax
+ 
+class MovieHandler( xml.sax.ContentHandler ):
+   def __init__(self):
+      self.CurrentData = ""
+      self.type = ""
+      self.format = ""
+      self.year = ""
+      self.rating = ""
+      self.stars = ""
+      self.description = ""
+ 
+   # 元素开始事件处理
+   def startElement(self, tag, attributes):
+      self.CurrentData = tag
+      if tag == "movie":
+         print("*****Movie*****")
+         title = attributes["title"]
+         print("Title:", title)
+ 
+   # 元素结束事件处理
+   def endElement(self, tag):
+      if self.CurrentData == "type":
+         print("Type:", self.type)
+      elif self.CurrentData == "format":
+         print("Format:", self.format)
+      elif self.CurrentData == "year":
+         print("Year:", self.year)
+      elif self.CurrentData == "rating":
+         print("Rating:", self.rating)
+      elif self.CurrentData == "stars":
+         print("Stars:", self.stars)
+      elif self.CurrentData == "description":
+         print("Description:", self.description)
+      self.CurrentData = ""
+ 
+   # 内容事件处理
+   def characters(self, content):
+      if self.CurrentData == "type":
+         self.type = content
+      elif self.CurrentData == "format":
+         self.format = content
+      elif self.CurrentData == "year":
+         self.year = content
+      elif self.CurrentData == "rating":
+         self.rating = content
+      elif self.CurrentData == "stars":
+         self.stars = content
+      elif self.CurrentData == "description":
+         self.description = content
+  
+if ( __name__ == "__main__"):
+   
+   # 创建一个 XMLReader
+   parser = xml.sax.make_parser()
+   # turn off namepsaces
+   parser.setFeature(xml.sax.handler.feature_namespaces, 0)
+ 
+   # 重写 ContextHandler
+   Handler = MovieHandler()
+   parser.setContentHandler( Handler )
+   
+   parser.parse("movies.ecxml")
+   
+'''
+'''
+import xml.sax
+ 
+class MovieHandler( xml.sax.ContentHandler ):
+   def __init__(self):
+      self.CurrentData = ""
+      self.type = ""
+      self.format = ""
+      self.year = ""
+      self.rating = ""
+      self.stars = ""
+      self.description = ""
+ 
+   # 元素开始事件处理
+   def startElement(self, tag, attributes):
+      self.CurrentData = tag
+      if tag == "movie":
+         print("*****Movie*****")
+         title = attributes["title"]
+         print("Title:", title)
+ 
+   # 元素结束事件处理
+   def endElement(self, tag):
+      if self.CurrentData == "type":
+         print("Type:", self.type)
+      elif self.CurrentData == "format":
+         print("Format:", self.format)
+      elif self.CurrentData == "year":
+         print("Year:", self.year)
+      elif self.CurrentData == "rating":
+         print("Rating:", self.rating)
+      elif self.CurrentData == "stars":
+         print("Stars:", self.stars)
+      elif self.CurrentData == "description":
+         print("Description:", self.description)
+      self.CurrentData = ""
+ 
+   # 内容事件处理
+   def characters(self, content):
+      if self.CurrentData == "type":
+         self.type = content
+      elif self.CurrentData == "format":
+         self.format = content
+      elif self.CurrentData == "year":
+         self.year = content
+      elif self.CurrentData == "rating":
+         self.rating = content
+      elif self.CurrentData == "stars":
+         self.stars = content
+      elif self.CurrentData == "description":
+         self.description = content
+  
+if ( __name__ == "__main__"):
+   
+   # 创建一个 XMLReader
+   parser = xml.sax.make_parser()
+   # turn off namepsaces
+   parser.setFeature(xml.sax.handler.feature_namespaces, 0)
+ 
+   # 重写 ContextHandler
+   Handler = MovieHandler()
+   parser.setContentHandler( Handler )
+   
+   parser.parse("SSD.ecxml")
+'''
+'''
+import numpy as np
+
+data = np.array([[2,3],[3,4]])
+u,s,v = np.linalg.svd(data)
+print(u)
+print(s)
+print(v)
+print(u@np.array([[s[0],0],[0,s[1]]])@v)
+print(np.linalg.eig(data))
+'''
+
+
+import sys
+from PyQt5.QtWidgets import QApplication, QWidget
+ 
+ 
+if __name__ == '__main__':
+    
+    app = QApplication(sys.argv)
+ 
+    w = QWidget()
+    w.resize(250, 150)
+    w.move(300, 300)
+    w.setWindowTitle('Simple')
+    w.show()
+    
+    sys.exit(app.exec_())
+
