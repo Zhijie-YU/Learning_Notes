@@ -49,6 +49,9 @@
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
     - [Material Point Method (MPM)](#material-point-method-mpm)
+      - [Traditional MPM](#traditional-mpm)
+        - [Deformation gradient](#deformation-gradient)
+        - [Push forward and pull back (lagrangian and eulerian function)](#push-forward-and-pull-back-lagrangian-and-eulerian-function)
       - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
       - [Constitutive Models](#constitutive-models)
         - [Elastic solids](#elastic-solids)
@@ -58,6 +61,7 @@
       - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
       - [Introducing Taichi "field"](#introducing-taichi-field)
       - [MPM Extension](#mpm-extension)
+      - [MPM-DEM Coupling](#mpm-dem-coupling)
   - [High performance physical simulation](#high-performance-physical-simulation)
     - [Hardware Architecture](#hardware-architecture)
       - [Background](#background)
@@ -754,6 +758,46 @@ Moment (力矩): $\mathbf{r}\times\mathbf{F}$
 No elements in MPM.
 MPM particles => FEM quadrature points (Gaussian points)
 MPM equations are derived using weak formulation.
+
+#### Traditional MPM
+
+##### Deformation gradient
+$\mathbf{\chi}$: undeformed space.
+$\mathbf{x}$: deformed space.
+$\phi(\mathbf{\chi},t)$: deformation map.
+Their relationship is denoted with
+$$\mathbf{x}=\phi(\mathbf{\chi},t)$$
+
+For translation: $\mathbf{x}=\mathbf{\chi}+vt\mathbf{n}$
+where $\mathbf{n}$ is the moving direction.
+For rotation: $\mathbf{x}=\mathbf{R}\mathbf{\chi}+\mathbf{b}$
+where $\mathbf{R}$ is the rotation matrix.(For 2D cases, $\mathbf{R}=\begin{bmatrix}
+  \cos\theta & -\sin\theta\\ \sin\theta & \cos\theta
+\end{bmatrix}$)
+
+Deformation gradient:
+$$\mathbf{F}=\frac{\partial(\mathbf{\chi},t)}{\partial\mathbf{\chi}}=\frac{\partial(\mathbf{x},t)}{\partial\mathbf{\chi}}$$
+
+$$F_{ij}=\frac{\partial\phi_i}{\partial\chi_j}=\frac{\partial x_i}{\partial\chi_j},\quad i,j=1,\dots,d$$
+
+For rigid translation: $\mathbf{F}=\mathbf{I}_{d\times d}$.
+For rigid rotation: $\mathbf{F}=\mathbf{R}$.
+
+The determinant of $\mathbf{F}$:
+$$J=\det(\mathbf{F})$$
+
+This characterizes the infinitesimal volume change and represents the **ratio** of the infinitesimal volume of material in configuration $\Omega^t$ to the original volume in $\Omega^0$.
+
++ $J=1$ means no volume change during the transformation. For rigid motions (rotations and translations), $J=1$.
++ $J>1$ means volume increase.
++ $J<1$ means volume decrease.
++ $J=0$ means volume becomes 0. In the real world this is impossible while numerically it is possible, eg. the material is so compressed that it becomes a plane or a line or a single volumeless point.
++ $J<0$ means the material is inverted. For a 2D triangle, this means one vertex passes through its opposing edge, resulting in negative area.
+
+
+
+##### Push forward and pull back (lagrangian and eulerian function)
+
 #### MLS-MPM (Moving Least Squares MPM)
 use MLS shape function in MPM
 
@@ -765,7 +809,18 @@ $i$ => grid node, $p$ => particle
 :ghost: For APIC (Some errors in P2G)
 ![](Taichi_images/apic.png)
 The main difference lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
-==Particle velocity gradient $C_p$:== the formula of it here is based on **quadratic** B-Spline kernel function. For Cubic or other kernels, the expression is different. (How to derive??)
+==Particle velocity gradient $C_p$:== the formula of it here is based on **quadratic** B-Spline kernel function. For Cubic or other kernels, the expression is different.
+> **How to derive $\mathbf{C}_p$??**
+$$
+\begin{aligned}
+  \mathbf{C}_p &= \mathbf{B}_p (\mathbf{D}_p)^{-1}\\
+  \mathbf{D}_p &= \sum_i \omega_{ip} (\mathbf{x}_i-\mathbf{x}_p)(\mathbf{x}_i-\mathbf{x}_p)^T\\
+  \mathbf{B}_p &= \sum_i \omega_{ip} \mathbf{v}_i (\mathbf{x}_i-\mathbf{x}_p)^T
+\end{aligned}
+$$
+>
+> Among these equations, $i$ represents grid node and $p$ represents particle. For **quadratic** kernel funciton(interpolation stencil), $\mathbf{D}_p=\frac{\Delta x^2}{4}\mathbf{I}$ and for **cubic**, $\mathbf{D}_p=\frac{\Delta x^2}{3}\mathbf{I}$ where $\Delta x$ is the size of the grid. The detailed derivation occurs within a 3X3 grid given in the above figure and is omitted here.
+
 ==Incompressible:== 常密度假定，即忽略内能变化，能量守恒表现为动能+势能守恒
 
 :ghost: For MLS-MPM
@@ -778,6 +833,10 @@ The main difference lies in the fact that in G2P, more information (velocity gra
 **How to derive grid momentum:**
 ![](Taichi_images/nodalForce1.png)
 ![](Taichi_images/nodalForce2.png)
+
+**How to employ a different material???**
+Substitute different forms of PK1 stress $\mathbf{P}(\mathbf{F})$.
+
 
 Enforcing boundary conditions (BC)
 Sticky: $\boldsymbol{v}_i^{n+1}=\boldsymbol{0}$
@@ -847,6 +906,7 @@ Key contribution: MLS-MPM uses MLS shape functions.
 Signed distance function (SDF): this function is used to perform inside/outside queries. Different shapes usually have different SDFs.
 For the SDF of any point,  its sign represents the point's relative location and its return value should be the shortest distance between the shape and the given point.
 
+#### MPM-DEM Coupling
 
 
 

@@ -316,20 +316,8 @@ print(u@np.array([[s[0],0],[0,s[1]]])@v)
 print(np.linalg.eig(data))
 '''
 
-
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget
- 
- 
-if __name__ == '__main__':
-    
-    app = QApplication(sys.argv)
- 
-    w = QWidget()
-    w.resize(250, 150)
-    w.move(300, 300)
-    w.setWindowTitle('Simple')
-    w.show()
-    
-    sys.exit(app.exec_())
+import numpy as np
+a = np.array([[1,2],[3,4]])
+for i,j in a:
+   print(i,j)
 
