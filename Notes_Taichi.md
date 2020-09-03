@@ -52,6 +52,17 @@
       - [Traditional MPM](#traditional-mpm)
         - [Deformation gradient](#deformation-gradient)
         - [Push forward and pull back (lagrangian and eulerian function)](#push-forward-and-pull-back-lagrangian-and-eulerian-function)
+        - [Constitutive model](#constitutive-model)
+        - [Governing equations](#governing-equations)
+        - [Material particles](#material-particles)
+          - [Interpolation function](#interpolation-function)
+          - [Lagrangian/Eulerian mass](#lagrangianeulerian-mass)
+          - [Lagrangian/Eulerian momentum](#lagrangianeulerian-momentum)
+        - [Discretization](#discretization-1)
+          - [Discrete time](#discrete-time)
+          - [Discrete space](#discrete-space)
+          - [Estimating volume](#estimating-volume)
+          - [Deformation gradient evolution](#deformation-gradient-evolution)
       - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
       - [Constitutive Models](#constitutive-models)
         - [Elastic solids](#elastic-solids)
@@ -68,7 +79,7 @@
       - [Locality](#locality)
     - [Advanced Taichi Programming](#advanced-taichi-programming)
       - [Structural Nodes (SNodes)](#structural-nodes-snodes)
-    - [THE END](#the-end)
+  - [THE END](#the-end)
 
 <!-- /code_chunk_output -->
 
@@ -760,25 +771,26 @@ MPM particles => FEM quadrature points (Gaussian points)
 MPM equations are derived using weak formulation.
 
 #### Traditional MPM
+Refer to [2016 MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) for details.
 
 ##### Deformation gradient
-$\mathbf{\chi}$: undeformed space.
+$\mathbf{X}$: undeformed space.
 $\mathbf{x}$: deformed space.
-$\phi(\mathbf{\chi},t)$: deformation map.
+$\phi(\mathbf{X},t)$: deformation map.
 Their relationship is denoted with
-$$\mathbf{x}=\phi(\mathbf{\chi},t)$$
+$$\mathbf{x}=\phi(\mathbf{X},t)$$
 
-For translation: $\mathbf{x}=\mathbf{\chi}+vt\mathbf{n}$
+For translation: $\mathbf{x}=\mathbf{X}+vt\mathbf{n}$
 where $\mathbf{n}$ is the moving direction.
-For rotation: $\mathbf{x}=\mathbf{R}\mathbf{\chi}+\mathbf{b}$
+For rotation: $\mathbf{x}=\mathbf{R}\mathbf{X}+\mathbf{b}$
 where $\mathbf{R}$ is the rotation matrix.(For 2D cases, $\mathbf{R}=\begin{bmatrix}
   \cos\theta & -\sin\theta\\ \sin\theta & \cos\theta
 \end{bmatrix}$)
 
 Deformation gradient:
-$$\mathbf{F}=\frac{\partial(\mathbf{\chi},t)}{\partial\mathbf{\chi}}=\frac{\partial(\mathbf{x},t)}{\partial\mathbf{\chi}}$$
+$$\mathbf{F}=\frac{\partial\phi(\mathbf{X},t)}{\partial\mathbf{X}}=\frac{\partial\mathbf{x}(\mathbf{X},t)}{\partial\mathbf{X}}$$
 
-$$F_{ij}=\frac{\partial\phi_i}{\partial\chi_j}=\frac{\partial x_i}{\partial\chi_j},\quad i,j=1,\dots,d$$
+$$F_{ij}=\frac{\partial\phi_i}{\partial X_j}=\frac{\partial x_i}{\partial X_j},\quad i,j=1,\dots,d$$
 
 For rigid translation: $\mathbf{F}=\mathbf{I}_{d\times d}$.
 For rigid rotation: $\mathbf{F}=\mathbf{R}$.
@@ -797,6 +809,169 @@ This characterizes the infinitesimal volume change and represents the **ratio** 
 
 
 ##### Push forward and pull back (lagrangian and eulerian function)
+==Definition：==
+Push forward $\Rightarrow$ Eulerian (function of $\mathbf{x}$)
+$$v(\mathbf{x},t)=V(\phi^{-1}(\mathbf{x},t),t)$$
+
+where $v$ is the push forward of $V$.
+Pull back $\Rightarrow$ Lagrangian (function of $\mathbf{X}$)
+$$V(\mathbf{X},t)=v(\phi(\mathbf{X},t),t)$$
+
+where $V$ is the pull back of $v$.
+
+==Material derivative:==
+For a general Eulerian function $f(\cdot,t)$,
+$$\frac{D}{Dt}f(\mathbf{x},t)=\frac{\partial f(\mathbf{x},t)}{\partial t}+\frac{\partial f(\mathbf{x},t)}{\partial x_j}v_j(\mathbf{x},t)$$
+
+where Eulerian $\frac{D}{Dt}f(\mathbf{x},t)$ is the push forward of $\frac{\partial F}{\partial t}$ and $F$ is a Lagrangian function.
+
+==Volume and area change:==
+Volume:
+$$v=JdV$$
+
+where $J=\det(\mathbf{F})$, $v\Rightarrow x$(Eulerian), $V\Rightarrow X$(Lagrangian).
+Based on this we have
+$$\int_{B^t}g(\mathbf{x})d\mathbf{x}=\int_{B^0}G(\mathbf{X})J(\mathbf{X},t)d\mathbf{X}$$
+
+where $g$ is the push forward of $G$.
+
+Area:
+$$d\mathbf{s}=\mathbf{F}^{-T}Jd\mathbf{S}\quad or\quad \mathbf{n}ds=\mathbf{F}^{-T}J\mathbf{N}dS$$
+
+where $s$ and $S$ are tiny areas.
+Based on this we have
+$$\int_{\partial B^t}h(\mathbf{x},t)\cdot\mathbf{n}(\mathbf{x})ds(\mathbf{x})=\int_{\partial B^0}H(\mathbf{X})\cdot\mathbf{F}^{-T}(\mathbf{X},t)N(\mathbf{X})J(\mathbf{X},t)dS(\mathbf{X})$$
+
+
+##### Constitutive model
+For **hyperelastic** material:
+PK1 stress (First Piola-Kirchoff stress) $\mathbf{P}$ can be derived from 
+$$\mathbf{P}=\frac{\partial\psi(\mathbf{F})}{\partial\mathbf{F}}$$
+
+where $\psi$ is the elastic energy density function (scalar function) and $\mathbf{F}$ is the deformation gradient.
+With index notation,
+$$P_{ij}=\frac{\partial\psi}{\partial{F_{ij}}}$$
+
+The Cauchy stress can be obtained from
+$$\mathbf{\sigma}=\frac{1}{J}\mathbf{P}\mathbf{F}^T=\frac{1}{\det(\mathbf{F})}\frac{\partial\psi}{\partial\mathbf{F}}\mathbf{F}^T$$
+
+2 common hyperelastic materials: Neo-Hookean and Fixed Corotated.
+Refer to [elastic solids](#elastic-solids).
+
+##### Governing equations
+Conservation of mass + Conservation of momentum
+
+> Determinant differentiation rule:
+> For an invertible matrix $\mathbf{A}$,
+> $$\frac{\partial\det(\mathbf{A})}{\partial \mathbf{A}}=\det(\mathbf{A}) \mathbf{A}^{-T}$$
+> This leads to the commonly used rule:
+> $$\frac{\partial\det(\mathbf{F})}{\partial \mathbf{F}}=\det(\mathbf{F}) \mathbf{F}^{-T}$$
+
+==Weak form of force balance==
+Mainly based on conservation of momentum.
+(Actually momentum theorem rather than conservation).
+$$m\Delta\mathbf{v}=\mathbf{F}\Delta t\Leftrightarrow \frac{m\Delta\mathbf{v}}{\Delta t}=\mathbf{F}$$
+Lagrangian view:
+$$\int_{\Omega^0}Q_i(\mathbf{X},t)R(\mathbf{X},0)A_i(\mathbf{X},t)d\mathbf{X}=\int_{\partial\Omega^0}Q_iT_ids(\mathbf{X})-\int_{\Omega^0}Q_{i,j}P_{ij}d\mathbf{X}$$
+
+Eulerian view:
+$$\int_{\Omega^t}q_i(\mathbf{x},t)\rho(\mathbf{x},t)a_i(\mathbf{x},t)d\mathbf{x}=\int_{\partial\Omega^t}q_it_ids(\mathbf{x})-\int_{\Omega^t}q_{i,k}\sigma_{ik}d\mathbf{x}$$
+
+Here $i,j,k$ are component index for dimensions, $t_i$ is the $i$ component of boundary force $\mathbf{t}$. 
+LHS (left-hand side) is some kind of momentum change rate over time while RHS is some kind of net force ignoring the external force.
+
+##### Material particles
+Momentum and mass are transfered between grid and particle through interpolation function.
+Index notation:
+Particle $\qquad\Leftrightarrow\qquad$ $p$
+Grid $\qquad\Leftrightarrow\qquad$ $i$
+
+###### Interpolation function
+The interpolation function is defined over the Eulerian grid rather than on the material particles like the kernel of SPH particles.
+$$w_{ip}=N_\mathbf{i}(\mathbf{x}_p)=N(\frac{1}{h}(x_p-x_i))N(\frac{1}{h}(y_p-y_i))N(\frac{1}{h}(z_p-z_i))$$
+
+$$\nabla w_{ip}=\nabla N_{\mathbf{i}}(\mathbf{x}_p)=
+\begin{pmatrix}
+  \frac{1}{h}N'(\frac{1}{h}(x_p-x_i))N(\frac{1}{h}(y_p-y_i))N(\frac{1}{h}(z_p-z_i))\\
+  N(\frac{1}{h}(x_p-x_i))\frac{1}{h}N'(\frac{1}{h}(y_p-y_i))N(\frac{1}{h}(z_p-z_i))\\
+  N(\frac{1}{h}(x_p-x_i))N(\frac{1}{h}(y_p-y_i))\frac{1}{h}N'(\frac{1}{h}(z_p-z_i))\\
+\end{pmatrix}$$
+
+Refer to [B-Spline kernel](#particle-in-cell-picapicflip) for plots of linear/quadratic/cubic functions.
+
+###### Lagrangian/Eulerian mass
+P2G mass transfer:
+$$m_i=\sum_p m_p N_i(\mathbf{x}_p)$$
+
+This ensures the conservation of mass through the partition of unity assumption on interpolation function $\sum_i N_i(\mathbf{x}_p)=1$:
+$$\sum_i m_i = \sum_i\sum_p m_p N_i(\mathbf{x}_p) = \sum_p m_p \sum_i N_i(\mathbf{x}_p) = \sum_p m_p$$
+
+No G2P mass transfer since the particle mass never changes.
+###### Lagrangian/Eulerian momentum
+P2G momentum transfer:
+$$\begin{aligned}
+  (m\mathbf{v})_i &= \sum_p m_p \mathbf{v}_p N_i(\mathbf{x}_p)\\
+  \mathbf{v}_i &= \frac{(m\mathbf{v})_i}{m_i}
+\end{aligned}$$
+
+Since $\sum_i m\mathbf{v}_i = \sum_i(m\mathbf{v})_i=\sum_p\sum_i m_p \mathbf{v}_p N_i(\mathbf{x}_p)=\sum_p m_p \mathbf{v}_p$, momentum is conserved in P2G transfer.
+
+G2P velocity transfer:
+Since particle mass keeps unchanged, only velocity is transfered in G2P rather than momentum.
+$$\mathbf{v}_p = \sum_i\mathbf{v}_iN_i(\mathbf{x}_p)$$
+
+Since $\sum_p m_p\mathbf{v}_p=\sum_p m_p\sum_i\mathbf{v}_iN_i(\mathbf{x}_p) = \sum_i\mathbf{v}_i\sum_pm_pN_i(\mathbf{x}_p)=\sum_i m_i \mathbf{v}_i$, momentum is conserved in G2P transfer.
+> Note:pig:: Unlike mass, total momentum keeps changing in the system. This is achieved in Grid operations through introducing impulse. Details will be given later.
+
+##### Discretization
+In this part, $i,j,k$ denote grid nodes, $\alpha,\beta,\gamma$ denote dimensional components. 
+For instance, $q_{i\alpha}$ means the $\alpha$ component of the vector quantity $\mathbf{q}$ that is stored at node $i$.
+###### Discrete time
+By introducing $a_{\alpha}(\mathbf{x},t^n)=\frac{1}{\Delta t}(v_\alpha^{n+1}(\mathbf{x})-v_\alpha^n(\mathbf{x}))$ into the [weak form governing equation](#governing-equations), we have
+$$\begin{aligned}
+  &\frac{1}{\Delta t}\int_{\Omega^{t^n}} q_\alpha(\mathbf{x},t^n)\rho(\mathbf{x},t^n)(v_\alpha^{n+1}(\mathbf{x})-v_\alpha^n(\mathbf{x}))d\mathbf{x}\\&=\int_{\partial\Omega^{t^n}}q_\alpha(\mathbf{x},t^n)t_\alpha(\mathbf{x},t^n)ds(\mathbf{x})-\int_{\Omega^{t^n}}q_{\alpha,\beta}(\mathbf{x},t^n)\sigma_{\alpha\beta}(\mathbf{x},t^n)d\mathbf{x}
+\end{aligned}$$
+
+###### Discrete space
+Further discretize the [weak form force balance equation](#discrete-time) over space, we have 
+$$\frac{((mv)_{i\alpha}^{n+1}-(mv)_{i\alpha}^{n})}{\Delta t}=\int_{\partial\Omega^{t^n}}N_i(\mathbf{x})t_\alpha(\mathbf{x},t^n)ds(\mathbf{x})-\int_{\Omega^{t^n}}N_{i,\beta}(\mathbf{x})\sigma_{\alpha\beta}(\mathbf{x},t^n)d\mathbf{x}$$
+
+Assuming we have an estimate of the Cauchy stress $\mathbf{\sigma}_p^n=\mathbf{\sigma}(\mathbf{x}_p^n,t^n)$ at each Lagrangian particle $\mathbf{x}_p^n$, part of the RHS can be written as
+$$\int_{\Omega^{t^n}}N_{i,\beta}(\mathbf{x})\sigma_{\alpha\beta}(\mathbf{x},t^n)d\mathbf{x}\approx\sum_p\sigma_{p\,\alpha\beta}^nN_{i,\beta}(\mathbf{x}_p^n)V_p^n$$
+
+where $V_p^n$ is the volume particle $p$ occupied at time $t^n$.
+
+###### Estimating volume
+There are mainly 2 methods to estimate.
++ Estimation based on grid density
+  $$\begin{aligned}
+    &m_p\approx R(\mathbf{X}_p,0)V_p^0\approx \rho(\mathbf{x}_p^n,t^n)V_p^n\\
+    &\rho(\mathbf{x}_p^n,t^n)\approx\sum_i\rho_i^nN_i(\mathbf{x}_p^n)\\
+    &\rho_i^n=\frac{m_i^n}{\Delta x^d}\\
+  \end{aligned}
+  $$
+
+  where $\Delta x$ is the size of each Eulerian grid and $d$ is the dimension. 
+  Since grid density is easy to compute, the volume can be estimated
+  $$V_p^n\approx\frac{m_p}{\rho(\mathbf{x}_p^n,t^n)}\approx\frac{m_p}{\sum_i\frac{m_i^n}{\Delta x^d}N_i(\mathbf{x}_p^n)}=\frac{m_p\Delta x^d}{\sum_i m_i^n N_i(\mathbf{x}_p^n)}$$
+
++ Estimation based on deformation gradient
+  Typically we have
+  $$V_p^n \approx J_p^n V_p^0$$
+
+  where $J_p^n = \det(\mathbf{F}_p^n)$.
+
+Baed on the second method and substituting Cauchy stress $\boldsymbol{\sigma}$ with $\frac{1}{J}\mathbf{P}\mathbf{F}^T$, the [RHS of the equation](#discrete-space) can be further rewritten as
+$$\sum_p\sigma_{p\,\alpha\beta}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^n=\sum_p\frac{1}{J_p^n}P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0J_p^n=\sum_p P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0$$
+
+Now the discretized weak form force balance equation can be written as
+$$\frac{((mv)_{i\alpha}^{n+1}-(mv)_{i\alpha}^{n})}{\Delta t}=\int_{\partial\Omega^{t^n}}N_i(\mathbf{x})t_\alpha(\mathbf{x},t^n)ds(\mathbf{x})-\sum_p P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0$$
+
+> Note: Different constitutive models are introduced to the scheme by expressing the PK1 stress $\mathbf{P}$ in different ways.
+
+###### Deformation gradient evolution
+
+
 
 #### MLS-MPM (Moving Least Squares MPM)
 use MLS shape function in MPM
@@ -806,7 +981,7 @@ Based on APIC.
 > ti example mpm88/99/128
 
 $i$ => grid node, $p$ => particle
-:ghost: For APIC (Some errors in P2G)
+:ghost: For APIC
 ![](Taichi_images/apic.png)
 The main difference lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
 ==Particle velocity gradient $C_p$:== the formula of it here is based on **quadratic** B-Spline kernel function. For Cubic or other kernels, the expression is different.
@@ -826,7 +1001,7 @@ $$
 :ghost: For MLS-MPM
 ![](Taichi_images/mls_mpm.png)
 
-> In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\boldsymbol{\psi}}{\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. 
+> In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\partial\boldsymbol{\psi}}{\partial\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. 
 
 > For MLS-MPM, the main difficulty lies in P2G where Grid momentum is hard to obtain considering constitutive model.
 
@@ -856,6 +1031,7 @@ Separate: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}\cdot
 PK1 stresses of hyperelastic models:
 + Neo-Hookean
 + (Fixed) Corotated
+
 ![](Taichi_images/elastic.png)
 For more information, refer to [2016 MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) given by Jiang etc.
 
@@ -945,14 +1121,15 @@ ti.root.dense(ti.i,4).place(x)
 ti.root.dense(ti.ij,(4,2)).place(x) <=> ti.root.dense(ti.i,4).dense(ti.j,2).place(x)
 ```
 
-### THE END
+## THE END
 Simplicity is good. Complexity is bad.
 
 How to solve a problem is much harder than just used a given approach to solve something.
 
 To make things simple is much harder than make it complex.
 
-MGPCG!!!??? 
+MGPCG(multigrid preconditioned conjugate gradient) !!!??? 
+Solver for $Ax=b$
 
 Learning for simulation?
 Simulation for learning!
