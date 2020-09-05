@@ -48,6 +48,7 @@
     - [Topology optimization](#topology-optimization)
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
+      - [Interpolation function (kernel)](#interpolation-function-kernel)
     - [Material Point Method (MPM)](#material-point-method-mpm)
       - [Traditional MPM](#traditional-mpm)
         - [Deformation gradient](#deformation-gradient)
@@ -63,12 +64,18 @@
           - [Discrete space](#discrete-space)
           - [Estimating volume](#estimating-volume)
           - [Deformation gradient evolution](#deformation-gradient-evolution)
+          - [Forces as energy gradient](#forces-as-energy-gradient)
+        - [Explicit time integration scheme](#explicit-time-integration-scheme)
+        - [Implicit time integration](#implicit-time-integration)
       - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
+        - [:ghost: PIC](#ghost-pic)
+        - [:ghost: APIC](#ghost-apic)
+        - [:ghost: MLS-MPM](#ghost-mls-mpm)
       - [Constitutive Models](#constitutive-models)
         - [Elastic solids](#elastic-solids)
         - [Weakly compressible fluids](#weakly-compressible-fluids)
         - [Elastoplastic solids](#elastoplastic-solids)
-        - [Singular value decomposition (**SVD**)](#singular-value-decomposition-svd)
+        - [Singular value decomposition (SVD)](#singular-value-decomposition-svd)
       - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
       - [Introducing Taichi "field"](#introducing-taichi-field)
       - [MPM Extension](#mpm-extension)
@@ -745,10 +752,20 @@ for frame in range(2000000):
     gui.show()
 ```
 
-<div align=center><img src="Taichi_images/APIC_pg.png" width="50%" height="50%"></div>
-
-For both PIC and APIC codes, information transfer occurs between each particle ($p$) and its surrounding 9 grid points ($i$). In this figure, each particle inside the green rectangle intersects with the other 9 points with the **kernel function**, which is defined on grid points.
+#### Interpolation function (kernel)
+There are mainly 3 kinds of interpolation function used in PIC/APIC/MPM.
 ![](Taichi_images/PICkernel.png)
+For both PIC and APIC, information transfer occurs between each particle ($p$) and its surrounding 4(linear)/9(quadratic)/16(cubic) grid points ($i$). In the figures below, each red particle inside intersects with the surrounding blue grid points through the **kernel function**, which is defined on grid points.
+**Linear**
+<div align=center><img src="Taichi_images/APIC_pg_linear.png" width="50%" height="50%"></div>
+
+**Quadratic**
+<div align=center><img src="Taichi_images/APIC_pg_quadratic.png" width="50%" height="50%"></div>
+
+**Cubic**
+<div align=center><img src="Taichi_images/APIC_pg_cubic.png" width="50%" height="50%"></div>
+
+
 During P2G and G2P cycle, the velocity is kind of smoothed and energy dissipation occurs.
 
 APIC conserves angular momentum!
@@ -897,7 +914,7 @@ $$\nabla w_{ip}=\nabla N_{\mathbf{i}}(\mathbf{x}_p)=
   N(\frac{1}{h}(x_p-x_i))N(\frac{1}{h}(y_p-y_i))\frac{1}{h}N'(\frac{1}{h}(z_p-z_i))\\
 \end{pmatrix}$$
 
-Refer to [B-Spline kernel](#particle-in-cell-picapicflip) for plots of linear/quadratic/cubic functions.
+Refer to [interpolation function](#interpolation-function-kernel) for plots of linear/quadratic/cubic functions.
 
 ###### Lagrangian/Eulerian mass
 P2G mass transfer:
@@ -936,7 +953,7 @@ $$\begin{aligned}
 Further discretize the [weak form force balance equation](#discrete-time) over space, we have 
 $$\frac{((mv)_{i\alpha}^{n+1}-(mv)_{i\alpha}^{n})}{\Delta t}=\int_{\partial\Omega^{t^n}}N_i(\mathbf{x})t_\alpha(\mathbf{x},t^n)ds(\mathbf{x})-\int_{\Omega^{t^n}}N_{i,\beta}(\mathbf{x})\sigma_{\alpha\beta}(\mathbf{x},t^n)d\mathbf{x}$$
 
-Assuming we have an estimate of the Cauchy stress $\mathbf{\sigma}_p^n=\mathbf{\sigma}(\mathbf{x}_p^n,t^n)$ at each Lagrangian particle $\mathbf{x}_p^n$, part of the RHS can be written as
+Assuming we have an estimate of the Cauchy stress $\mathbf{\sigma}_p^n=\mathbf{\sigma}(\mathbf{x}_p^n,t^n)$ at each Lagrangian particle $\mathbf{x}_p^n$, force on the Eulerian grid node $i$ can be written as
 $$\int_{\Omega^{t^n}}N_{i,\beta}(\mathbf{x})\sigma_{\alpha\beta}(\mathbf{x},t^n)d\mathbf{x}\approx\sum_p\sigma_{p\,\alpha\beta}^nN_{i,\beta}(\mathbf{x}_p^n)V_p^n$$
 
 where $V_p^n$ is the volume particle $p$ occupied at time $t^n$.
@@ -961,16 +978,82 @@ There are mainly 2 methods to estimate.
 
   where $J_p^n = \det(\mathbf{F}_p^n)$.
 
-Baed on the second method and substituting Cauchy stress $\boldsymbol{\sigma}$ with $\frac{1}{J}\mathbf{P}\mathbf{F}^T$, the [RHS of the equation](#discrete-space) can be further rewritten as
+Baed on the second method and substituting Cauchy stress $\boldsymbol{\sigma}$ with $\frac{1}{J}\mathbf{P}\mathbf{F}^T$, the [force on the Eulerian grid node $i$](#discrete-space) can be further rewritten as
 $$\sum_p\sigma_{p\,\alpha\beta}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^n=\sum_p\frac{1}{J_p^n}P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0J_p^n=\sum_p P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0$$
 
 Now the discretized weak form force balance equation can be written as
 $$\frac{((mv)_{i\alpha}^{n+1}-(mv)_{i\alpha}^{n})}{\Delta t}=\int_{\partial\Omega^{t^n}}N_i(\mathbf{x})t_\alpha(\mathbf{x},t^n)ds(\mathbf{x})-\sum_p P_{p\,\alpha\gamma}^n F_{p\,\beta\gamma}^n N_{i,\beta}(\mathbf{x}_p^n)V_p^0$$
 
-> Note: Different constitutive models are introduced to the scheme by expressing the PK1 stress $\mathbf{P}$ in different ways.
+> Note: Different constitutive models are introduced to the scheme by expressing the PK1 stress $\mathbf{P}$ in different ways. 
+> In computer graphics, **hyperelastic** material is preferred since it has a well defined potential energy $\psi$ and the PK1 stress can be easily computed as $\mathbf{P}=\frac{\partial\psi}{\partial\mathbf{F}}$.
 
 ###### Deformation gradient evolution
+$$\begin{aligned}
+  &\frac{\partial}{\partial t}\mathbf{F}(\mathbf{X}_p,t^{n+1})\approx\frac{\mathbf{F}_p^{n+1}-\mathbf{F}_p^n}{\Delta t}\\
+  &\mathbf{F}_p^{n+1}=\mathbf{F}_p^n+\Delta t \frac{\partial}{\partial t}\mathbf{F}(\mathbf{X}_p,t^{n+1})
+\end{aligned}$$
 
+where $\mathbf{F}(\mathbf{X}_p,t^{n+1})$ is simplified as $\mathbf{F}_p^{n+1}$.
+Also we have
+$$\begin{aligned}
+  &\frac{\partial}{\partial t}\mathbf{F}(\mathbf{X},t^{n+1})=\frac{\partial\mathbf{V}}{\partial\mathbf{X}}(\mathbf{X},t^{n+1})=\frac{\partial \mathbf{v}^{n+1}(\mathbf{x})}{\partial\mathbf{x}}\mathbf{F}(\mathbf{X},t^n)\\
+  &\mathbf{v}^{n+1}(\mathbf{x})=\sum_i \mathbf{v}_i^{n+1}N_i(\mathbf{x})\\
+  &\frac{\partial \mathbf{v}^{n+1}(\mathbf{x})}{\partial\mathbf{x}}=\sum_i \mathbf{v}_i^{n+1}(\frac{\partial N_i(\mathbf{x})}{\partial\mathbf{x}})^T
+\end{aligned}$$
+
+Combining them together we have
+$$\mathbf{F}_p^{n+1}=(\mathbf{I}+\Delta t\sum_i \mathbf{v}_i^{n+1}(\frac{\partial N_i(\mathbf{x}_p^n)}{\partial\mathbf{x}})^T)\mathbf{F}_p^n$$
+
+Based on this, $\mathbf{F}_p^{n+1}$ can be obtained given $\mathbf{v}_i^{n+1}$ and $\mathbf{F}_p^n$ at each particle.
+
+###### Forces as energy gradient
+[Force on the Eulerian grid node](#estimating-volume) (derived from weak form governing equation) can also be derived from energy gradient for hyperelastic material.
+
+##### Explicit time integration scheme
++ Particle to grid (P2G)
+  + $(m\mathbf{v})_i^{n+1}=\sum_pw_{ip}(m_p\mathbf{v}_p^n+\mathbf{B}_p(\mathbf{D}_p)^{-1}(\mathbf{x}_i-\mathbf{x}_p))$ (**Grid momentum**)
+    > This is from APIC.
+    > $$\begin{aligned}\mathbf{C}_p &= \mathbf{B}_p (\mathbf{D}_p)^{-1}\\\mathbf{D}_p &= \sum_i w_{ip} (\mathbf{x}_i-\mathbf{x}_p)(\mathbf{x}_i-\mathbf{x}_p)^T\\ \mathbf{B}_p &= \sum_i w_{ip} \mathbf{v}_i (\mathbf{x}_i-\mathbf{x}_p)^T  \end{aligned}$$
+    >
+    > For quadratic kernel, $\mathbf{D}_p=\frac{\Delta x^2}{4}\mathbf{I}$ and $\mathbf{C}_p=\frac{4}{{\Delta x}^2}\sum_i w_{ip} \mathbf{v}_i (\mathbf{x}_i-\mathbf{x}_p)^T$;
+    > For cubic kernel, $\mathbf{D}_p=\frac{\Delta x^2}{3}\mathbf{I}$ and $\mathbf{C}_p=\frac{3}{{\Delta x}^2}\sum_i w_{ip} \mathbf{v}_i (\mathbf{x}_i-\mathbf{x}_p)^T$;
+    > For linear kernel, $\mathbf{C}_p=\sum_i\mathbf{v}_i(\frac{\partial N_i}{\partial\mathbf{x}}(\mathbf{x}_p))^T=\sum_i\mathbf{v}_i(\nabla w_{ip})^T$
+  + $m_i^{n+1}=\sum_p m_p w_{ip}$ (**Grid mass**)
++ Grid operations
+  + $\hat\mathbf{v}_i^{n+1}=\frac{(m\mathbf{v})_i^{n+1}}{m_i}$ (**Grid velocity**)
+  + Only label the grid nodes with nonzero masses as solver unknowns. (**Identify grid DOF**)
+  + $\mathbf{f}_i^n=-\sum_p \mathbf{P}_p^n {\mathbf{F}_p^n}^T \nabla w_{ip}^n V_p^0$ or $\mathbf{f}_i^n=-\sum_p\boldsymbol{\sigma}_p^n \nabla w_{ip}^n V_p^n$ (**Compute grid forces**)
+    > The 2 formulas can be transferred via $\boldsymbol{\sigma}=\frac{1}{J}\mathbf{P}\mathbf{F}^T$ and $V_p^n=JV_p^0$.
+    > For hyperelastic material, $\mathbf{P}$ is easily obtained by $\mathbf{P}=\frac{\partial\psi_p}{\partial\mathbf{F}_p}$ thus the 1st formula is used.
+  + $\mathbf{v}_i^{n+1}=\hat\mathbf{v}_i^{n+1}+\Delta t\frac{\mathbf{f}    _i^n}{m_i}$ (**Grid velocity update**)
+    > Boundary conditions and collision objects are also taken into account in this part.
++ Grid to particle (G2P)
+  + $\mathbf{F}_p^{n+1}=(\mathbf{I}+\Delta t\sum_i \mathbf{v}_i^{n+1}(\nabla w_{ip}^n)^T)\mathbf{F}_p^n$ (**Particle deformation gradient update**)
+    > Gradient of interpolation function is needed here. $\nabla w_{ip} = \frac{\partial N_i(\mathbf{x}_p)}{\partial\mathbf{x}}$ is a $d$ dimensional vector.
+  + $\mathbf{D}_p = \sum_i w_{ip} (\mathbf{x}_i-\mathbf{x}_p)(\mathbf{x}_i-\mathbf{x}_p)^T$ and $\mathbf{B}_p = \sum_i w_{ip} \mathbf{v}_i (\mathbf{x}_i-\mathbf{x}_p)^T$
+    > Actually this is $\mathbf{C}_p = \mathbf{B}_p (\mathbf{D}_p)^{-1}$ update.
+  + $\mathbf{v}_p^{n+1}=\sum_i w_{ip}\mathbf{v}_i^{n+1}$ (**Particle velocity update**)
+  + $\mathbf{x}_p^{n+1}=\mathbf{x}_p^n+\Delta t \mathbf{v}_p^{n+1}$ (**Particle advection**)
+
+##### Implicit time integration
+The main difference from explicit scheme lies in the **grid velocity update** step.
++ In explicit:
+  $\mathbf{v}_i^{n+1}=\hat\mathbf{v}_i^{n+1}+\Delta t\frac{\mathbf{f} _i(\mathbf{x}_i^n)}{m_i}$
++ In implicit:
+  $\mathbf{v}_i^{n+1}=\hat\mathbf{v}_i^{n+1}+\Delta t\frac{\mathbf{f}  _i(\mathbf{x}_i^{n+1})}{m_i}$
+  > Force is implicitly dependent on grid motion thus the grid velocity cannot be updated directly (backward Euler system).
+
+  With the aid of the equation of motion 
+  $$\mathbf{h}(\mathbf{v}^{n+1})=\mathbf{M}\mathbf{v}^{n+1}-\mathbf{M}\mathbf{v}^n-\Delta t\mathbf{f}_i(\mathbf{x}^n+\Delta t\mathbf{v}^{n+1})=\mathbf{0}$$
+  
+  the updated grid velocity can be computed with Newton-Raphson iteration method
+  $$\mathbf{v}^{(i+1)}=\mathbf{v}^{(i)}-(\frac{\partial\mathbf{h}}{\partial\mathbf{v}}(\mathbf{v}^{(i)}))^{-1}\mathbf{h}(\mathbf{v}^{(i)})$$
+  > where $(i)$ denotes the $i$ th iteration step rather than grid node. At each step, $\mathbf{F}_p$ should also be updated. Usually only one iteration step is taken.
+
+Solving this eqation with NR method is equivalent to minimizing the following objective function:
+$$E(\mathbf{v}_i)=\sum_i\frac{1}{2}m_i\|\mathbf{v}_i-\mathbf{v}_i^n\|^2+e(\mathbf{x}_i^n+\Delta t \mathbf{v}_i)$$
+
+Transfering the problem to an optimization problem enables a **larger time step**. This can occur only when the forces can be derived from a potential energy function and the details are omitted here.  
 
 
 #### MLS-MPM (Moving Least Squares MPM)
@@ -981,7 +1064,19 @@ Based on APIC.
 > ti example mpm88/99/128
 
 $i$ => grid node, $p$ => particle
-:ghost: For APIC
+
+##### :ghost: PIC
++ Particle to grid (P2G)
+  + $(m\mathbf{v})_i^{n+1}=\sum_p w_{ip} m_p \mathbf{v}_p^n$
+  + $m_i^{n+1}=\sum_p m_p w_{ip}$
++ Grid operations
+  + $\mathbf{v}_i^{n+1}=\frac{(m\mathbf{v})_i^{n+1}}{m_i^{n+1}}$
++ Grid to particle (G2P)
+  + $\mathbf{v}_p^{n+1}=\sum_i w_{ip}\mathbf{v}_i^{n+1}$
+  + $\mathbf{x}_p^{n+1}=\mathbf{x}_p^n+\Delta t \mathbf{v}_p^{n+1}$
+
+
+##### :ghost: APIC
 ![](Taichi_images/apic.png)
 The main difference lies in the fact that in G2P, more information (velocity gradient matrix $\boldsymbol{C}_p$) is transfered.
 ==Particle velocity gradient $C_p$:== the formula of it here is based on **quadratic** B-Spline kernel function. For Cubic or other kernels, the expression is different.
@@ -994,11 +1089,11 @@ $$
 \end{aligned}
 $$
 >
-> Among these equations, $i$ represents grid node and $p$ represents particle. For **quadratic** kernel funciton(interpolation stencil), $\mathbf{D}_p=\frac{\Delta x^2}{4}\mathbf{I}$ and for **cubic**, $\mathbf{D}_p=\frac{\Delta x^2}{3}\mathbf{I}$ where $\Delta x$ is the size of the grid. The detailed derivation occurs within a 3X3 grid given in the above figure and is omitted here.
+> Among these equations, $i$ represents grid node and $p$ represents particle. For **quadratic** kernel funciton(interpolation stencil), $\mathbf{D}_p=\frac{\Delta x^2}{4}\mathbf{I}$ and for **cubic**, $\mathbf{D}_p=\frac{\Delta x^2}{3}\mathbf{I}$ where $\Delta x$ is the size of the grid. The detailed derivation is omitted here.
 
 ==Incompressible:== 常密度假定，即忽略内能变化，能量守恒表现为动能+势能守恒
 
-:ghost: For MLS-MPM
+##### :ghost: MLS-MPM
 ![](Taichi_images/mls_mpm.png)
 
 > In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\partial\boldsymbol{\psi}}{\partial\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. 
@@ -1045,7 +1140,7 @@ For more information, refer to [2016 MPM course](https://www.seas.upenn.edu/~cff
 We can also refer to snow paper.
 
 
-##### Singular value decomposition (**SVD**)
+##### Singular value decomposition (SVD)
 Every real matrix $M_{n\times m}$ can be decomposed into $M_{n\times m}=U_{n\times n}\Sigma_{n\times m}V_{m\times m}^T$
 U,V => rotation
 $\Sigma$ => streching
@@ -1128,7 +1223,7 @@ How to solve a problem is much harder than just used a given approach to solve s
 
 To make things simple is much harder than make it complex.
 
-MGPCG(multigrid preconditioned conjugate gradient) !!!??? 
+MGPCG(multigrid preconditioned conjugate gradient)
 Solver for $Ax=b$
 
 Learning for simulation?
