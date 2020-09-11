@@ -67,6 +67,8 @@
           - [Forces as energy gradient](#forces-as-energy-gradient)
         - [Explicit time integration scheme](#explicit-time-integration-scheme)
         - [Implicit time integration](#implicit-time-integration)
+        - [Collison objects](#collison-objects)
+        - [Lagrangian forces](#lagrangian-forces)
       - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
         - [:ghost: PIC](#ghost-pic)
         - [:ghost: APIC](#ghost-apic)
@@ -79,6 +81,7 @@
       - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
       - [Introducing Taichi "field"](#introducing-taichi-field)
       - [MPM Extension](#mpm-extension)
+      - [CPIC (Compatible PIC)](#cpic-compatible-pic)
       - [MPM-DEM Coupling](#mpm-dem-coupling)
   - [High performance physical simulation](#high-performance-physical-simulation)
     - [Hardware Architecture](#hardware-architecture)
@@ -1055,6 +1058,14 @@ $$E(\mathbf{v}_i)=\sum_i\frac{1}{2}m_i\|\mathbf{v}_i-\mathbf{v}_i^n\|^2+e(\mathb
 
 Transfering the problem to an optimization problem enables a **larger time step**. This can occur only when the forces can be derived from a potential energy function and the details are omitted here.  
 
+##### Collison objects
+The collison is enforced on grid node velocity immediately after forces are applied to grid velocities.
+collison detection + relative velocity computation
+
+##### Lagrangian forces
+$$\mathbf{f}=-\frac{\partial U}{\partial \mathbf{x}}$$
+
+where $U$ is the total energy.
 
 #### MLS-MPM (Moving Least Squares MPM)
 use MLS shape function in MPM
@@ -1096,9 +1107,11 @@ $$
 ##### :ghost: MLS-MPM
 ![](Taichi_images/mls_mpm.png)
 
-> In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\partial\boldsymbol{\psi}}{\partial\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. 
+> In P2G, $\boldsymbol{P}(\boldsymbol{F}_p^{n+1})=\frac{\partial\boldsymbol{\psi}}{\partial\bold{F}}$ refers to PK1 stress tensor of the specific constitutive model. For hyperelastic models with a well-defined potential energy density function, this is easy to get.
 
 > For MLS-MPM, the main difficulty lies in P2G where Grid momentum is hard to obtain considering constitutive model.
+
+> Comparing with traditional MPM, the main contribution is the unification of the affine matrix and velocity gradient. ($\mathbf{C}_p \approx \nabla \mathbf{v}_p$)
 
 **How to derive grid momentum:**
 ![](Taichi_images/nodalForce1.png)
@@ -1108,10 +1121,10 @@ $$
 Substitute different forms of PK1 stress $\mathbf{P}(\mathbf{F})$.
 
 
-Enforcing boundary conditions (BC)
-Sticky: $\boldsymbol{v}_i^{n+1}=\boldsymbol{0}$
-Slip: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1})$
-Separate: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}\cdot\min(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1},0)$
+Enforcing boundary conditions (BC) on grid velocity:
++ Sticky: $\boldsymbol{v}_i^{n+1}=\boldsymbol{0}$
++ Slip: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1})$
++ Separate: $\boldsymbol{v}_i^{n+1}=\hat\boldsymbol{v}_i^{n+1}-\boldsymbol{n}\cdot\min(\boldsymbol{n}^T\hat\boldsymbol{v}_i^{n+1},0)$
 
 > For boundary condition enforcement:
 > For PIC/APIC, when applying BC to a cube moving in x direction, the cube composed of particles will be compressed without moving in y direction.
@@ -1176,6 +1189,15 @@ Key contribution: MLS-MPM uses MLS shape functions.
 
 Signed distance function (SDF): this function is used to perform inside/outside queries. Different shapes usually have different SDFs.
 For the SDF of any point,  its sign represents the point's relative location and its return value should be the shortest distance between the shape and the given point.
+
+#### CPIC (Compatible PIC)
+CPIC is designed to deal with rigid body cutting (Displacement discontinuity). Refer to [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf) for details.
+"Compatible": particle and its surrounding grid node at the same side of the rigid body.
+
+The following is a snapshot of a MLS-MPM program where a block is cut by a thin plane.
+![](Taichi_images/MLS-MPM-cutting.png)
+
+
 
 #### MPM-DEM Coupling
 
