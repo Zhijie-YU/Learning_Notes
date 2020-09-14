@@ -81,6 +81,10 @@
       - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
       - [Introducing Taichi "field"](#introducing-taichi-field)
       - [MPM Extension](#mpm-extension)
+      - [Moving least squares method (MLS)](#moving-least-squares-method-mls)
+        - [Least squares (LS)](#least-squares-ls)
+        - [Weighted least squares (WLS)](#weighted-least-squares-wls)
+        - [Moving least squares (MLS)](#moving-least-squares-mls)
       - [CPIC (Compatible PIC)](#cpic-compatible-pic)
       - [MPM-DEM Coupling](#mpm-dem-coupling)
   - [High performance physical simulation](#high-performance-physical-simulation)
@@ -1190,12 +1194,64 @@ Key contribution: MLS-MPM uses MLS shape functions.
 Signed distance function (SDF): this function is used to perform inside/outside queries. Different shapes usually have different SDFs.
 For the SDF of any point,  its sign represents the point's relative location and its return value should be the shortest distance between the shape and the given point.
 
+#### Moving least squares method (MLS)
+Refer to [LS-WLS-MLS](https://www.docin.com/p-271196866.html).
+To reconstruct a field based on discrete point cloud.
+##### Least squares (LS)
+> Global approximation. Each sample point is treated equally.
+
+Objective function
+$$\min_{f\in\prod^d_m}\sum_i \|f(\mathbf{x}_i)-f_i\|^2$$
+
+where $d$ refers to dimension, $m$ refers to degree of the polynomial space, $\mathbf{x}_i$ is the sampling points with given function value $f_i$.
+$$f(\mathbf{x})=\mathbf{b}(\mathbf{x})^T\mathbf{c}$$
+
+The key point is to compute the coefficients vector $\mathbf{c}$.
+
+##### Weighted least squares (WLS)
+> Global approximation based on local approximation and weighted summation.
+
+Objective function:
+$$\min_{f\in\prod^d_m}\sum_i \theta(\|\bar\mathbf{x}-\mathbf{x}_i\|)\|f(\mathbf{x}_i)-f_i\|^2$$
+
+where $\bar\mathbf{x}$ is a given point, $\theta(\|\bar\mathbf{x}-\mathbf{x}_i\|)$ is a weight function centered at $\bar\mathbf{x}$. The output optimal function is
+$$f_{\bar\mathbf{x}}(\mathbf{x})=\mathbf{b}(\mathbf{x}-\bar\mathbf{x})^T\mathbf{c}(\bar\mathbf{x})$$
+
+This approximates the function at the domain around given point $\bar\mathbf{x}$ and thus is a local approximation.
+For totally $n$ sample points with known values, the global approximation can be expressed as 
+$$f(\mathbf{x}) = \sum_{j=1}^n\varphi_j(\mathbf{x})f_{\bar\mathbf{x}}(\mathbf{x}) = \sum_{j=1}^n\varphi_j(\mathbf{x})\mathbf{b}(\mathbf{x}-\bar\mathbf{x}_j)^T\mathbf{c}(\bar\mathbf{x}_j)$$
+
+where $\varphi_j(\mathbf{x})=\frac{\theta_j(\mathbf{x})}{\sum_{k=1}^n\theta_k(\mathbf{x})}$ is the global weight function which ensures Partition of Unity (PU) $\sum_{j=1}^n\varphi_j(\mathbf{x})=1$ at any point $\mathbf{x}$ of the global domain $\Omega$.
+
+##### Moving least squares (MLS)
+> Local approximation base on WLS. 
+> The global approximation is not a single function, but **a list of** local approximation functions based on WLS.
+
+$$f(\mathbf{x})=f_\mathbf{x}(\mathbf{x})$$
+> For each point $\mathbf{x}$, a local WLS approximation centered at $\mathbf{x}$ is implemented to get its function value. As the point **moves** over the entire domain $\Omega$, the global approximation is obtained.
+
 #### CPIC (Compatible PIC)
-CPIC is designed to deal with rigid body cutting (Displacement discontinuity). Refer to [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf) for details.
+CPIC is designed to deal with rigid body cutting (Displacement discontinuity) and two-way rigid body coupling. Refer to [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf) for details.
 "Compatible": particle and its surrounding grid node at the same side of the rigid body.
 
-The following is a snapshot of a MLS-MPM program where a block is cut by a thin plane.
+1. Grid-wise colored distance field (CDF)
+   > Need to capture
+   $d_i$: valid distance between grid node and rigid surface; 
+   $A_{ir}$: tag denotes whether there is valid distance between grid and rigid surface (=1: yes; =0: no); 
+   $T_{ir}$: tag denotes which side of the rigid surface the gird is on (= +/-).
+2. Particle-wise colored distance field (based on grid CDF)
+   > Particle penalty force occurs.
+3. CPIC P2G transfer
+   > Only the information of compatible particles is transferred to grid.
+4. Grid operation (apply BC)
+5. CPIC G2P transfer 
+   > Need to compute ghost velocity for incompatible grid nodes (impulse from rigid body to particle)
+6. Rigid body advection
+   > Impulse from particle to rigid body (Two-way coupling is thus achieved.)
+
+The following is a snapshot of a MLS-MPM program (CPIC) where a block is cut by a thin plane.
 ![](Taichi_images/MLS-MPM-cutting.png)
+![](Taichi_images/cut.gif)
 
 
 
