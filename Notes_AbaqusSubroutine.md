@@ -1,4 +1,4 @@
-Table of Contents
+# Table of Contents
 [TOC]
 # Constitutive model
 ## Von Mises Model 
@@ -635,7 +635,7 @@ $A = \frac{2G}{K+\frac{4}{3}G}\quad\mathbf{I}_S=\begin{bmatrix}1 & 0 & 0\\& 1 & 
 #### Plane stress constraints
 For plane stress cases, the plane stress constraints are always considered while deriving formulas.
 + Basics
-  The linear elastic tangent operator and the relationship between $\varepsilon_{33}$ and $\varepsilon_{11}+\varepsilon_{22}$. (Refer to **Plane stress linear elasticity**)
+  The linear elastic tangent operator and the relationship between $\varepsilon_{33}$ and $\varepsilon_{11}+\varepsilon_{22}$. (Refer to [Plane stress linear elasticity](#plane-stress-linear-elasticity))
 + In **matrix** form:
   $$
   \boldsymbol{\sigma}=
@@ -1012,9 +1012,83 @@ $$
    \end{aligned}
    $$
 
-## Creep
+## Gurson plastic model
+### Newton method
+#### Solve nonlinear equation
+$$\begin{aligned}
+  &f(x)=0\\
+  &\Rightarrow f(x_k)+f'(x_k)(x_{k+1}-x_k)=0 \quad\rm{(taylor\,expansion)}\\
+  &\Rightarrow x_{k+1}=x_k-\frac{f(x_k)}{f'(x_k)}\quad\rm{(update\,rule)}\\
+\end{aligned}$$
 
+#### Solve nonlinear equations
+To solve this equation system
+$$\begin{cases}
+  f_1(x_1,\dots,x_n)=0,\\
+  \dots\\
+  f_n(x_1,\dots,x_n)=0\\
+\end{cases}$$
 
+Define $\mathbf{x}=(x_1,\dots,x_n)^T\in \mathbf{R}^n$,$\mathbf{F}=(f_1,\dots,f_n)^T$, and the above one can be rewritten as
+$$\begin{aligned}
+  &\mathbf{F}(\mathbf{x})=\mathbf{0}\\
+  &\Rightarrow \mathbf{F}(\mathbf{x}^{(k)})+\mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{x}^{(k)})=\mathbf{0}\\
+  &\Rightarrow \mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{x}^{(k)})=-\mathbf{F}(\mathbf{x}^{(k)})\\
+  &\Rightarrow \mathbf{x}^{(k+1)}=\mathbf{x}^{(k)}-\mathbf{F}'(\mathbf{x}^{(k)})^{-1}\mathbf{F}(\mathbf{x}^{(k)})
+\end{aligned}$$
+
+where Jacobian matrix
+$$\mathbf{F}'(\mathbf{x}^{(k)})=\begin{bmatrix}
+  \frac{\partial f_1(\mathbf{x})}{\partial x_1} & \frac{\partial f_1(\mathbf{x})}{\partial x_2} & \dots & \frac{\partial f_1(\mathbf{x})}{\partial x_n}\\
+  \frac{\partial f_2(\mathbf{x})}{\partial x_1} & \frac{\partial f_2(\mathbf{x})}{\partial x_2} & \dots & \frac{\partial f_2(\mathbf{x})}{\partial x_n}\\
+  \vdots & \vdots &  & \vdots\\
+  \frac{\partial f_n(\mathbf{x})}{\partial x_1} & \frac{\partial f_n(\mathbf{x})}{\partial x_2} & \dots & \frac{\partial f_n(\mathbf{x})}{\partial x_n}\\
+\end{bmatrix}$$
+
+Usually linear system $\mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{x}^{(k)})=-\mathbf{F}(\mathbf{x}^{(k)})$ is solved and $\Delta\mathbf{x}$ is obtained and used to update $\mathbf{x}$.
+
+### Basic equations for plastic model
++ 应变张量弹塑性分解
++ 弹性准则
++ 塑性流动准则与硬化准则
+  + 塑性流动准则
+    决定屈服后的方向，分为关联流动(associated flow rule，即势函数与屈服函数相同)与非关联流动(unassociated flow rule)。
+  + 硬化准则
+    内变量的演化方程
++ 屈服方程
++ 加卸载条件
+
+### Computation program
+#### Inputs and outputs
++ Pure input:
+  + material parameters: 
+    PROPS(NPROPS) = $[E,\mu,q_1,q_2,q_3,f_0,\sigma_{y0},\bar{\varepsilon}^p_0,\sigma_{y1},\bar{\varepsilon}^p_1,\dots]$
+  + strain $\boldsymbol{\varepsilon}$: STRAN(NTENS) = $[\varepsilon_{11}, \varepsilon_{22}, \varepsilon_{33}, 2\varepsilon_{12}, 2\varepsilon_{23}, 2\varepsilon_{13}]$
+  + $\Delta\boldsymbol{\varepsilon}$: DSTRAN(NTENS) = $[\Delta\varepsilon_{11}, \Delta\varepsilon_{22}, \Delta\varepsilon_{33}, \Delta2\varepsilon_{12}, \Delta2\varepsilon_{23}, \Delta2\varepsilon_{13}]$
++ Input and updated:  
+  + stress: STRESS(NTENS) = $[\sigma_{11},\sigma_{22},\sigma_{33}, \sigma_{12}, \sigma_{23}, \sigma_{13}]$
+  + state variables: STATEV(NSTATV) = $[\varepsilon^e*6, \varepsilon^p*6, \bar{\varepsilon}^p,f]$
++ Pure output:
+  Consistant tangent moduli $\boldsymbol{D}^e$ or $\boldsymbol{D}^{ep}$: DDSDDE(NTENS,NTENS)
+> For 3D cases in Abaqus, NTENS(6) = NDI(3) + NSHR(3).
+> State variable porosity $f$ should be initialized with a commonly nonzero value $f_0$ during the iterations of the first increment.
+
+#### Computation flow
+1. Initialization
+2. Elastic predictor
+3. Check plastic admissibility
+   Mises stress $q$:
+   $$\begin{aligned}
+     q&=\sqrt{\frac{3}{2}\boldsymbol{s}:\boldsymbol{s}}=\sqrt{3J_2(\boldsymbol{s})}\\
+     &=\sqrt{((\sigma_{11}-\sigma_{22})^2+(\sigma_{22}-\sigma_{33})^2+(\sigma_{11}-\sigma_{33})^2+3*(\sigma_{12}^2+\sigma_{21}^2+\sigma_{23}^2+\sigma_{32}^2+\sigma_{13}^2+\sigma_{31}^2))/2}\\
+   \end{aligned}$$
+
+   $$p=-\frac{1}{3}\boldsymbol{\sigma}:\mathbf{I}=-\frac{1}{3}tr(\boldsymbol{\sigma})$$
+
+   $$\boldsymbol{s}=\boldsymbol{\sigma}-\frac{1}{3}tr(\boldsymbol{\sigma})\mathbf{I}=\boldsymbol{\sigma}+p\mathbf{I}$$
+4. Return mapping
+5. Update state variables and stress
+6. Compute tangent operator
 
 
 ---
@@ -1143,8 +1217,32 @@ All the variables are passed in if not specifically pointed out.
 
 
 ---
+# Mathematica
+$f[x\_]:=x[[2,1]]+x[[2,2]]$用来定义函数；f[x]用来获得返回值,常用于自变量为张量的情况。
+$f=x^3-2*y$用来定义函数；$f/.\{x->2,y->3\}$用来赋值并获得返回值，常用于自变量为标量情况。
+
+---
 # Fortran
 Fortran子程序或函数都是传址调用。
+必须先写声明语句DIMENSION等再写其他语句。
+DO循环语句，推荐使用EXIT而使用GOTO。
+```fortran
+    DO 10 K=1,5
+      IF(K.EQ.5) THEN
+        GOTO 10
+      ENDIF
+10  CONTINUE
+(跳出循环后K=6，会再次+1！！！)
+
+    DO 10 K=1,5
+      IF(K.EQ.5) THEN
+        EXIT
+      ENDIF
+10  CONTINUE
+(跳出循环后K=5)
+```
+数组赋值一般采取a(1,1)=0这种傻瓜式一一赋值。
+数组做函数参数，仅传递首位地址，需要在函数内通过重新dimension获取所有元素，因而需要同时传递数组的size作为参数；传出数组时也只能传出首位，目前多采用传入一个已定义大小数组用于输出数组。
 
 <table><tbody>
     <tr>
