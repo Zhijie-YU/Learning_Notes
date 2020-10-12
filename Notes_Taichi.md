@@ -18,7 +18,7 @@
       - [Mass-spring system](#mass-spring-system)
       - [Time integration](#time-integration)
       - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
-      - [Lagrangian fluid simulation: Smoothed particle hydrodynamics(SPH)](#lagrangian-fluid-simulation-smoothed-particle-hydrodynamicssph)
+      - [Smoothed particle hydrodynamics(SPH)](#smoothed-particle-hydrodynamicssph)
       - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
     - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
       - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
@@ -279,7 +279,7 @@ $$\Delta t \leq c\sqrt{\frac{m}{k}} \quad c\approx1$$
 
 Implicit (backward Euler, middle-point, ...)
 
-#### Lagrangian fluid simulation: Smoothed particle hydrodynamics(SPH)
+#### Smoothed particle hydrodynamics(SPH)
 **Courant-Friedrichs-Lewy(CFL) condition**
 Another threshold
 ![](Taichi_images/ms_5.png)

@@ -1089,6 +1089,9 @@ Usually linear system $\mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{
 4. Return mapping
 5. Update state variables and stress
 6. Compute tangent operator
+   $$\mathbf{D}^e=2G\boldsymbol{\rm{I}}_S+A(K-\frac{2}{3}G)\boldsymbol{I}\otimes\boldsymbol{I}$$
+
+   For details, refer to [elsatic stiffness](#infinitesimal-isotropic-elasticity-tensor-fourth-order-tensor).
 
 
 ---
@@ -1223,26 +1226,29 @@ $f=x^3-2*y$用来定义函数；$f/.\{x->2,y->3\}$用来赋值并获得返回值
 
 ---
 # Fortran
-Fortran子程序或函数都是传址调用。
-必须先写声明语句DIMENSION等再写其他语句。
-DO循环语句，推荐使用EXIT而使用GOTO。
-```fortran
-    DO 10 K=1,5
-      IF(K.EQ.5) THEN
-        GOTO 10
-      ENDIF
-10  CONTINUE
-(跳出循环后K=6，会再次+1！！！)
++ Fortran子程序或函数都是传址调用。
++ 必须先写声明语句DIMENSION等再写其他语句。
++ DO循环语句，推荐使用EXIT而使用GOTO。
+  ```fortran
+      DO 10 K=1,5
+        IF(K.EQ.5) THEN
+          GOTO 10
+        ENDIF
+  10  CONTINUE
+  (跳出循环后K=6，会再次+1！！！)
 
-    DO 10 K=1,5
-      IF(K.EQ.5) THEN
-        EXIT
-      ENDIF
-10  CONTINUE
-(跳出循环后K=5)
-```
-数组赋值一般采取a(1,1)=0这种傻瓜式一一赋值。
-数组做函数参数，仅传递首位地址，需要在函数内通过重新dimension获取所有元素，因而需要同时传递数组的size作为参数；传出数组时也只能传出首位，目前多采用传入一个已定义大小数组用于输出数组。
+      DO 10 K=1,5
+        IF(K.EQ.5) THEN
+          EXIT
+        ENDIF
+  10  CONTINUE
+  (跳出循环后K=5)
+  ```
++ 数组赋值一般采取a(1,1)=0这种傻瓜式一一赋值，也可以用`DATA A /1,2,3/`对已定义大小一维或多维数组进行初始化(列优先)。
++ 数组做函数参数，仅传递首位地址，需要在函数内通过重新dimension获取所有元素，因而需要同时传递数组的size作为参数；传出数组时也只能传出首位，目前多采用传入一个已定义大小数组用于输出数组。
++ Fortran在编译时已经注释掉的语句也会编译，其语法正确性也会影响编译结果。
++ 矩阵运算(如matmul())得到的结果只能赋值给一个已通过DIMENSION声明大小的数组而不能是任意一个新变量，同理数组运算或赋值得到的结果只能赋给一个已定义大小的数组。
++ 直接打印输出数组时对于二维遵循列优先原则，对于四阶张量则不同，输出顺序为(1,1,1,1),(1,2,1,1),(1,3,1,1),(2,1,1,1)...不推荐整体打印。实际上程序将四阶张量转换为了二阶张量然后按列优先的方法进行输展示。
 
 <table><tbody>
     <tr>
