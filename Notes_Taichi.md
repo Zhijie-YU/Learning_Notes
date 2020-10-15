@@ -19,6 +19,9 @@
       - [Time integration](#time-integration)
       - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
       - [Smoothed particle hydrodynamics(SPH)](#smoothed-particle-hydrodynamicssph)
+        - [Navier-Stokes equations](#navier-stokes-equations)
+        - [Courant-Friedrichs-Lewy(CFL) condition](#courant-friedrichs-lewycfl-condition)
+        - [Neighborhood search(NS)](#neighborhood-searchns)
       - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
     - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
       - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
@@ -280,11 +283,24 @@ $$\Delta t \leq c\sqrt{\frac{m}{k}} \quad c\approx1$$
 Implicit (backward Euler, middle-point, ...)
 
 #### Smoothed particle hydrodynamics(SPH)
-**Courant-Friedrichs-Lewy(CFL) condition**
-Another threshold
+For an overview of the concepts of SPH, refer to [tutorial](https://interactivecomputergraphics.github.io/SPH-Tutorial/).
+##### Navier-Stokes equations
+![](Taichi_images/NS-equations.png)
+Here mainly conservation of momentum is enforced.
+Navier-Stokes equations express conservation of momentum (Newton's second law),conservation of mass and conservation of energy and is used to describe viscous flow.
+Density($\rho$), velocity($v$), pressure($p$), viscosity($\mu$) and temperature($T$) are involved.
+Refer to [NS equations](https://www.simscale.com/docs/simwiki/numerics-background/what-are-the-navier-stokes-equations/) for details.
+
+For low speed fluids incompressibility is assumed and the equations can be simplified while for high speed ones compressibility should be taken into consideration.
+
+##### Courant-Friedrichs-Lewy(CFL) condition
 ![](Taichi_images/ms_5.png)
-**Accelerating SPH: Neighborhood search**
+
+##### Neighborhood search(NS)
+**Accelerating SPH:**
 ![](Taichi_images/ms_6.png)
+For details of neighborhood list, refer to [Neighbour lists in smoothed particle hydrodynamics](https://ephyslab.uvigo.es/publica/documents/file_259Dominguez_etal_2010_IJNMF_DOI.pdf).
+![](Taichi_images/SPH_NeighborList.png)
 
 #### Output mp4 and gif in taichi
 ti.imwrite(img, filename)
