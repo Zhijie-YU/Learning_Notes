@@ -1161,6 +1161,9 @@ PK1 stresses of hyperelastic models:
 + (Fixed) Corotated
 
 ![](Taichi_images/elastic.png)
+> $\mathbf{F}=\mathbf{R}\mathbf{S}$ is the polar decomposition of $\mathbf{F}$ ($\mathbf{R}$ a rotation matrix and $\mathbf{S}$ symmetric). 
+> Since $\mathbf{F}=\mathbf{U}\boldsymbol{\Sigma}\mathbf{V}^T=\mathbf{U}\mathbf{V}^T\mathbf{V}\boldsymbol{\Sigma}\mathbf{V}^T$, we can simply get $\mathbf{R}=\mathbf{U}\mathbf{V}^T$ and $\mathbf{S}=\mathbf{V}\boldsymbol{\Sigma}\mathbf{V}^T$.
+
 For more information, refer to [2016 MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) given by Jiang etc.
 
 ##### Weakly compressible fluids
@@ -1248,7 +1251,7 @@ $$f(\mathbf{x})=f_\mathbf{x}(\mathbf{x})$$
 
 #### CPIC (Compatible PIC)
 CPIC is designed to deal with rigid body cutting (Displacement discontinuity) and two-way rigid body coupling. Refer to [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf) for details.
-"Compatible": particle and its surrounding grid node at the same side of the rigid body.
+"Compatible": particle and its surrounding grid node at the same side of the the same rigid body.
 
 1. Grid-wise colored distance field (CDF)
    > Need to capture
@@ -1256,19 +1259,30 @@ CPIC is designed to deal with rigid body cutting (Displacement discontinuity) an
    $A_{ir}$: tag denotes whether there is valid distance between grid and rigid surface (=1: yes; =0: no); 
    $T_{ir}$: tag denotes which side of the rigid surface the gird is on (= +/-).
 2. Particle-wise colored distance field (based on grid CDF)
-   > Particle penalty force occurs.
+   > Particle penalty force occurs. (not sure, maybe in step 6)
 3. CPIC P2G transfer
    > Only the information of compatible particles is transferred to grid.
-4. Grid operation (apply BC)
+4. Grid operation (apply overall BC)
 5. CPIC G2P transfer 
-   > Need to compute ghost velocity for incompatible grid nodes (impulse from rigid body to particle)
+   > Need to compute ghost velocity for incompatible grid nodes (impulse from rigid body to particle, projection is needed.)
 6. Rigid body advection
    > Impulse from particle to rigid body (Two-way coupling is thus achieved.)
 
-The following is a snapshot of a MLS-MPM program (CPIC) where a block is cut by a thin plane.
-![](Taichi_images/MLS-MPM-cutting.png)
+The following is a snapshot of a MLS-MPM [program](mpm_cutting_thin.py) (CPIC) where a block is cut by a thin plane.
+> :ghost: Rigid body impulse and penalty force are not considered.
+
+![](Taichi_images/cutSolid.png)
 ![](Taichi_images/cut.gif)
 
+The following is a snapshot of a CPIC [program](mpm_cutting_rotation.py) about a rotating fan.
+> :ghost: No penalty force is considered thus some particles can penetrate the blades.
+> **Angular momentum theorem** is employed to simulate the rigid body rotation with the accumulated impulse from the particles to the closest rigid bodies. 
+
+![](Taichi_images/frame_00054.png)
+![](Taichi_images/fan.gif)
+
+The rotation fan case in [MLS-MPM paper](2018_mlsmpm.pdf).
+![](Taichi_images/MLS-MPM_paperFan.png)
 
 
 #### MPM-DEM Coupling
