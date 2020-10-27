@@ -22,6 +22,7 @@
         - [Navier-Stokes equations](#navier-stokes-equations)
         - [Courant-Friedrichs-Lewy(CFL) condition](#courant-friedrichs-lewycfl-condition)
         - [Neighborhood search(NS)](#neighborhood-searchns)
+        - [SPH cases](#sph-cases)
       - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
     - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
       - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
@@ -301,6 +302,9 @@ For low speed fluids incompressibility is assumed and the equations can be simpl
 ![](Taichi_images/ms_6.png)
 For details of neighborhood list, refer to [Neighbour lists in smoothed particle hydrodynamics](https://ephyslab.uvigo.es/publica/documents/file_259Dominguez_etal_2010_IJNMF_DOI.pdf).
 ![](Taichi_images/SPH_NeighborList.png)
+
+##### SPH cases
+![](Taichi_images/DFSPH.gif)
 
 #### Output mp4 and gif in taichi
 ti.imwrite(img, filename)
