@@ -1092,9 +1092,9 @@ $$\mathbf{f}=-\frac{\partial U}{\partial \mathbf{x}}$$
 where $U$ is the total energy.
 
 #### MLS-MPM (Moving Least Squares MPM)
-use MLS shape function in MPM
-
-Easier to implement than traditional MPM.
+Refer to [MLS-MPM](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf) for details.
+Using MLS shape function in MPM
+Easier to implement than traditional MPM since velocity gradient is approximated with affine matrix.
 Based on APIC.
 > ti example mpm88/99/128
 

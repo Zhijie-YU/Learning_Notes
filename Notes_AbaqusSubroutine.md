@@ -907,6 +907,7 @@ $$
 K = \frac{E}{3(1-2\nu)}
 $$
 
+
 4. If epflag = True, goto 5(elsatoplastic); else goto 6(elastic).
 5. Compute elastoplastic consistent tangent operator
    + Compute $\xi$ 
@@ -1062,7 +1063,7 @@ Usually linear system $\mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{
 #### Inputs and outputs
 + Pure input:
   + material parameters: 
-    PROPS(NPROPS) = $[E,\mu,q_1,q_2,q_3,f_0,\sigma_{y0},\bar{\varepsilon}^p_0,\sigma_{y1},\bar{\varepsilon}^p_1,\dots]$
+    PROPS(NPROPS) = $[E,\mu,q_1,q_2,q_3,f_0,\varepsilon_N,s_N,f_N,\sigma_{y0},\bar{\varepsilon}^p_0,\sigma_{y1},\bar{\varepsilon}^p_1,\dots]$
   + strain $\boldsymbol{\varepsilon}$: STRAN(NTENS) = $[\varepsilon_{11}, \varepsilon_{22}, \varepsilon_{33}, 2\varepsilon_{12}, 2\varepsilon_{23}, 2\varepsilon_{13}]$
   + $\Delta\boldsymbol{\varepsilon}$: DSTRAN(NTENS) = $[\Delta\varepsilon_{11}, \Delta\varepsilon_{22}, \Delta\varepsilon_{33}, \Delta2\varepsilon_{12}, \Delta2\varepsilon_{23}, \Delta2\varepsilon_{13}]$
 + Input and updated:  
@@ -1075,23 +1076,70 @@ Usually linear system $\mathbf{F}'(\mathbf{x}^{(k)})(\mathbf{x}^{(k+1)}-\mathbf{
 
 #### Computation flow
 1. Initialization
+Shear modulus:
+$$
+G = \frac{E}{2(1+\nu)}
+$$
+Bulk modulus:
+$$
+K = \frac{E}{3(1-2\nu)}
+$$
+For common 3D cases:
+$$
+\begin{Bmatrix}
+\sigma_{11}\\
+\sigma_{22}\\
+\sigma_{33}\\
+\sigma_{12}\\
+\sigma_{23}\\
+\sigma_{13}\\
+\end{Bmatrix}=
+\begin{bmatrix}
+K+\frac{4}{3}G & K-\frac{2}{3}G & K-\frac{2}{3}G & 0 & 0 & 0\\
+K-\frac{2}{3}G & K+\frac{4}{3}G & K-\frac{2}{3}G & 0 & 0 & 0\\
+K-\frac{2}{3}G & K-\frac{2}{3}G & K+\frac{4}{3}G & 0 & 0 & 0\\
+0 & 0 & 0 & G & 0 & 0\\
+0 & 0 & 0 & 0 & G & 0\\
+0 & 0 & 0 & 0 & 0 & G\\
+\end{bmatrix}
+\begin{Bmatrix}
+\varepsilon_{11}\\
+\varepsilon_{22}\\
+\varepsilon_{33}\\
+2\varepsilon_{12}\\
+2\varepsilon_{23}\\
+2\varepsilon_{13}\\
+\end{Bmatrix}
+$$
+A variable used for computing consistent tangent stiffness matrix:
+$$
+C_{ijkl} = 2G*\delta_{ik}\delta_{jl}+(K-\frac{2}{3}G)\delta_{ij}\delta_{kl}
+$$
 2. Elastic predictor
+   
 3. Check plastic admissibility
    Mises stress $q$:
    $$\begin{aligned}
      q&=\sqrt{\frac{3}{2}\boldsymbol{s}:\boldsymbol{s}}=\sqrt{3J_2(\boldsymbol{s})}\\
+     &=\sqrt{3*(\frac{1}{3}(\sigma_{11}^2+\sigma_{22}^2+\sigma_{33}^2-\sigma_{11}\sigma_{22}-\sigma_{22}\sigma_{33}-\sigma_{33}\sigma_{11})+\frac{1}{2}(\sigma_{12}^2+\sigma_{21}^2+\sigma_{23}^2+\sigma_{32}^2+\sigma_{13}^2+\sigma_{31}^2))}\\
      &=\sqrt{((\sigma_{11}-\sigma_{22})^2+(\sigma_{22}-\sigma_{33})^2+(\sigma_{11}-\sigma_{33})^2+3*(\sigma_{12}^2+\sigma_{21}^2+\sigma_{23}^2+\sigma_{32}^2+\sigma_{13}^2+\sigma_{31}^2))/2}\\
    \end{aligned}$$
 
    $$p=-\frac{1}{3}\boldsymbol{\sigma}:\mathbf{I}=-\frac{1}{3}tr(\boldsymbol{\sigma})$$
 
    $$\boldsymbol{s}=\boldsymbol{\sigma}-\frac{1}{3}tr(\boldsymbol{\sigma})\mathbf{I}=\boldsymbol{\sigma}+p\mathbf{I}$$
+
+   $$\phi=(\frac{q}{\sigma_y})^2+2q_1f\cosh{(-\frac{3}{2}\frac{q_2p}{\sigma_y})-(1+q_3f^2)}$$
+
+   If $\phi>0$, goto 5; else, goto 4.
 4. Return mapping
 5. Update state variables and stress
 6. Compute tangent operator
+   The consistent tangent operator in Gurson model is different from the common [elsatic stiffness](#infinitesimal-isotropic-elasticity-tensor-fourth-order-tensor) where
    $$\mathbf{D}^e=2G\boldsymbol{\rm{I}}_S+A(K-\frac{2}{3}G)\boldsymbol{I}\otimes\boldsymbol{I}$$
 
-   For details, refer to [elsatic stiffness](#infinitesimal-isotropic-elasticity-tensor-fourth-order-tensor).
+   In this case, things are different. The consistent tangent stiffness matrix is nonsymmetric. Symmetry is used to transfer it to a symmetric one which has been proved to have little influence on the results.
+
 
 
 ---
