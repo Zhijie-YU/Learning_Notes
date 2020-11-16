@@ -1140,6 +1140,7 @@ $$
 
    In this case, things are different. The consistent tangent stiffness matrix is nonsymmetric. Symmetry is used to transfer it to a symmetric one which has been proved to have little influence on the results.
 
+## Hill plastic model
 
 
 ---
