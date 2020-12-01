@@ -3,97 +3,117 @@
 
 <!-- code_chunk_output -->
 
-- [Taichi language](#taichi-language)
-- [Taichi syntax basics](#taichi-syntax-basics)
-  - [Data format](#data-format)
-  - [Kernel and function](#kernel-and-function)
-  - [For loops](#for-loops)
-  - [Atomic operations](#atomic-operations)
-  - [Scope](#scope)
-  - [Phases of a Taichi program](#phases-of-a-taichi-program)
-  - [Debug mode](#debug-mode)
-- [Lagrangian and Eulerian View](#lagrangian-and-eulerian-view)
-  - [Lagrangian simulation approaches (1)](#lagrangian-simulation-approaches-1)
-    - [Mass-spring system](#mass-spring-system)
-    - [Time integration](#time-integration)
-    - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
-    - [Smoothed particle hydrodynamics(SPH)](#smoothed-particle-hydrodynamicssph)
-    - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
-  - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
-    - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
-    - [Taichi programming language advanced features](#taichi-programming-language-advanced-features)
-      - [ODOP](#odop)
-      - [Metaprogramming](#metaprogramming)
-      - [Differentiable programming](#differentiable-programming)
-      - [Visualization](#visualization)
-  - [Eulerian Fluid Simulation](#eulerian-fluid-simulation)
-    - [Gradient](#gradient)
-    - [Divergence](#divergence)
-    - [Curl](#curl)
-    - [Laplace operator $\Delta$](#laplace-operator-delta)
-  - [Poisson's Equation and Fast Method](#poissons-equation-and-fast-method)
-- [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
-  - [FEM overview](#fem-overview)
-  - [Discretizing Poisson's equation](#discretizing-poissons-equation)
-    - [2D Poisson's equation](#2d-poissons-equation)
-    - [Weak formulation](#weak-formulation)
-    - [Getting rid of second-order terms](#getting-rid-of-second-order-terms)
-    - [Discretization](#discretization)
-  - [Discretizing linear elasticity](#discretizing-linear-elasticity)
-    - [Linear elasticity FEM](#linear-elasticity-fem)
-    - [Index notation](#index-notation)
-    - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
-    - [Building the linear system](#building-the-linear-system)
-  - [Topology optimization](#topology-optimization)
-- [Smoothed Particle Hydrodynamics (SPH)](#smoothed-particle-hydrodynamics-sph)
-  - [Navier-Stokes equations](#navier-stokes-equations)
-  - [Courant-Friedrichs-Lewy(CFL) condition](#courant-friedrichs-lewycfl-condition)
-  - [Neighborhood search(NS)](#neighborhood-searchns)
-  - [WCSPH](#wcsph)
-  - [PCISPH](#pcisph)
-  - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
-    - [NS equations](#ns-equations)
-    - [DFSPH cases](#dfsph-cases)
-- [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
-  - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
-    - [Interpolation function (kernel)](#interpolation-function-kernel)
-  - [Material Point Method (MPM)](#material-point-method-mpm)
-    - [Traditional MPM](#traditional-mpm)
-      - [Deformation gradient](#deformation-gradient)
-      - [Push forward and pull back (lagrangian and eulerian function)](#push-forward-and-pull-back-lagrangian-and-eulerian-function)
-      - [Constitutive model](#constitutive-model)
-      - [Governing equations](#governing-equations)
-      - [Material particles](#material-particles)
-      - [Discretization](#discretization-1)
-      - [Explicit time integration scheme](#explicit-time-integration-scheme)
-      - [Implicit time integration](#implicit-time-integration)
-      - [Collison objects](#collison-objects)
-      - [Lagrangian forces](#lagrangian-forces)
-    - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
-      - [:ghost: PIC](#ghost-pic)
-      - [:ghost: APIC](#ghost-apic)
-      - [:ghost: MLS-MPM](#ghost-mls-mpm)
-    - [Constitutive Models](#constitutive-models)
-      - [Elastic solids](#elastic-solids)
-      - [Weakly compressible fluids](#weakly-compressible-fluids)
-      - [Elastoplastic solids](#elastoplastic-solids)
-      - [Singular value decomposition (SVD)](#singular-value-decomposition-svd)
-    - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
-    - [Introducing Taichi "field"](#introducing-taichi-field)
-    - [MPM Extension](#mpm-extension)
-    - [Moving least squares method (MLS)](#moving-least-squares-method-mls)
-      - [Least squares (LS)](#least-squares-ls)
-      - [Weighted least squares (WLS)](#weighted-least-squares-wls)
-      - [Moving least squares (MLS)](#moving-least-squares-mls)
-    - [CPIC (Compatible PIC)](#cpic-compatible-pic)
-    - [MPM-DEM Coupling](#mpm-dem-coupling)
-- [High performance physical simulation](#high-performance-physical-simulation)
-  - [Hardware Architecture](#hardware-architecture)
-    - [Background](#background)
-    - [Locality](#locality)
-  - [Advanced Taichi Programming](#advanced-taichi-programming)
-    - [Structural Nodes (SNodes)](#structural-nodes-snodes)
-- [THE END](#the-end)
+- [Simulation with Taichi](#simulation-with-taichi)
+  - [Taichi language](#taichi-language)
+  - [Taichi syntax basics](#taichi-syntax-basics)
+    - [Data format](#data-format)
+    - [Kernel and function](#kernel-and-function)
+    - [For loops](#for-loops)
+    - [Atomic operations](#atomic-operations)
+    - [Scope](#scope)
+    - [Phases of a Taichi program](#phases-of-a-taichi-program)
+    - [Debug mode](#debug-mode)
+  - [Lagrangian and Eulerian View](#lagrangian-and-eulerian-view)
+    - [Lagrangian simulation approaches (1)](#lagrangian-simulation-approaches-1)
+      - [Mass-spring system](#mass-spring-system)
+      - [Time integration](#time-integration)
+      - [Explicit v.s. implicit time integration](#explicit-vs-implicit-time-integration)
+      - [Smoothed particle hydrodynamics(SPH)](#smoothed-particle-hydrodynamicssph)
+      - [Output mp4 and gif in taichi](#output-mp4-and-gif-in-taichi)
+    - [Lagrangian simulation approaches (2)](#lagrangian-simulation-approaches-2)
+      - [Basics of deformation, elasticity and FEM](#basics-of-deformation-elasticity-and-fem)
+      - [Taichi programming language advanced features](#taichi-programming-language-advanced-features)
+        - [ODOP](#odop)
+        - [Metaprogramming](#metaprogramming)
+        - [Differentiable programming](#differentiable-programming)
+        - [Visualization](#visualization)
+    - [Eulerian Fluid Simulation](#eulerian-fluid-simulation)
+      - [Gradient](#gradient)
+      - [Divergence](#divergence)
+      - [Curl](#curl)
+      - [Laplace operator $\Delta$](#laplace-operator-delta)
+    - [Poisson's Equation and Fast Method](#poissons-equation-and-fast-method)
+  - [Linear FEM and Topology optimization](#linear-fem-and-topology-optimization)
+    - [FEM overview](#fem-overview)
+    - [Discretizing Poisson's equation](#discretizing-poissons-equation)
+      - [2D Poisson's equation](#2d-poissons-equation)
+      - [Weak formulation](#weak-formulation)
+      - [Getting rid of second-order terms](#getting-rid-of-second-order-terms)
+      - [Discretization](#discretization)
+    - [Discretizing linear elasticity](#discretizing-linear-elasticity)
+      - [Linear elasticity FEM](#linear-elasticity-fem)
+      - [Index notation](#index-notation)
+      - [Discretize Cauchy momentum equation using FEM](#discretize-cauchy-momentum-equation-using-fem)
+      - [Building the linear system](#building-the-linear-system)
+    - [Topology optimization](#topology-optimization)
+  - [Smoothed Particle Hydrodynamics (SPH)](#smoothed-particle-hydrodynamics-sph)
+    - [Navier-Stokes equations](#navier-stokes-equations)
+    - [Courant-Friedrichs-Lewy(CFL) condition](#courant-friedrichs-lewycfl-condition)
+    - [Neighborhood search(NS)](#neighborhood-searchns)
+    - [Weakly compressible SPH (WCSPH)](#weakly-compressible-sph-wcsph)
+      - [Kernel function](#kernel-function)
+      - [Governing equations and their SPH formulation](#governing-equations-and-their-sph-formulation)
+        - [Continuity equation](#continuity-equation)
+        - [Momentum equation](#momentum-equation)
+        - [Equation of state (EOS)](#equation-of-state-eos)
+      - [Viscosity](#viscosity)
+      - [Surface tension (表面张力)](#surface-tension-表面张力)
+      - [Boundary particles](#boundary-particles)
+      - [Time step](#time-step)
+      - [Computation flow](#computation-flow)
+    - [Predictive-corrective incompressible SPH (PCISPH)](#predictive-corrective-incompressible-sph-pcisph)
+    - [Implicit incompressible SPH (IISPH)](#implicit-incompressible-sph-iisph)
+    - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
+      - [NS equations](#ns-equations)
+      - [DFSPH cases](#dfsph-cases)
+  - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
+    - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
+      - [Interpolation function (kernel)](#interpolation-function-kernel)
+    - [Material Point Method (MPM)](#material-point-method-mpm)
+      - [Traditional MPM](#traditional-mpm)
+        - [Deformation gradient](#deformation-gradient)
+        - [Push forward and pull back (lagrangian and eulerian function)](#push-forward-and-pull-back-lagrangian-and-eulerian-function)
+        - [Constitutive model](#constitutive-model)
+        - [Governing equations](#governing-equations)
+        - [Material particles](#material-particles)
+          - [Interpolation function](#interpolation-function)
+          - [Lagrangian/Eulerian mass](#lagrangianeulerian-mass)
+          - [Lagrangian/Eulerian momentum](#lagrangianeulerian-momentum)
+        - [Discretization](#discretization-1)
+          - [Discrete time](#discrete-time)
+          - [Discrete space](#discrete-space)
+          - [Estimating volume](#estimating-volume)
+          - [Deformation gradient evolution](#deformation-gradient-evolution)
+          - [Forces as energy gradient](#forces-as-energy-gradient)
+        - [Explicit time integration scheme](#explicit-time-integration-scheme)
+        - [Implicit time integration](#implicit-time-integration)
+        - [Collison objects](#collison-objects)
+        - [Lagrangian forces](#lagrangian-forces)
+      - [MLS-MPM (Moving Least Squares MPM)](#mls-mpm-moving-least-squares-mpm)
+        - [:ghost: PIC](#ghost-pic)
+        - [:ghost: APIC](#ghost-apic)
+        - [:ghost: MLS-MPM](#ghost-mls-mpm)
+      - [Constitutive Models](#constitutive-models)
+        - [Elastic solids](#elastic-solids)
+        - [Weakly compressible fluids](#weakly-compressible-fluids)
+        - [Elastoplastic solids](#elastoplastic-solids)
+        - [Singular value decomposition (SVD)](#singular-value-decomposition-svd)
+      - [Lagrangian forces in MPM](#lagrangian-forces-in-mpm)
+      - [Introducing Taichi "field"](#introducing-taichi-field)
+      - [MPM Extension](#mpm-extension)
+      - [Moving least squares method (MLS)](#moving-least-squares-method-mls)
+        - [Least squares (LS)](#least-squares-ls)
+        - [Weighted least squares (WLS)](#weighted-least-squares-wls)
+        - [Moving least squares (MLS)](#moving-least-squares-mls)
+      - [CPIC (Compatible PIC)](#cpic-compatible-pic)
+      - [MPM-DEM Coupling](#mpm-dem-coupling)
+  - [High performance physical simulation](#high-performance-physical-simulation)
+    - [Hardware Architecture](#hardware-architecture)
+      - [Background](#background)
+      - [Locality](#locality)
+    - [Advanced Taichi Programming](#advanced-taichi-programming)
+      - [Structural Nodes (SNodes)](#structural-nodes-snodes)
+  - [THE END](#the-end)
 
 <!-- /code_chunk_output -->
 
@@ -572,8 +592,166 @@ For low speed fluids incompressibility is assumed and the equations can be simpl
 For details of neighborhood list, refer to [Neighbour lists in smoothed particle hydrodynamics](https://ephyslab.uvigo.es/publica/documents/file_259Dominguez_etal_2010_IJNMF_DOI.pdf).
 ![](Taichi_images/SPH_NeighborList.png)
 
-### WCSPH
-### PCISPH
+### Weakly compressible SPH (WCSPH)
+This method allows for small, user-defined density fluctuations rather than strictly enforcing incompressibility to save time for solving Poisson equation.
+Refer to [WCSPH2007](https://www.researchgate.net/publication/220789258_Weakly_Compressible_SPH_for_Free_Surface_Flows) for more details.
+
+#### Kernel function
+A commonly used kernel function in SPH is the cubic spline kernel [Monaghan1992](http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf)(*actually there are many kinds of cubic spline kernels*:joy:):
+$$
+W(q)=\begin{cases}
+  \sigma_3[1-\frac{3}{2}q^2+\frac{3}{4}q^3],\quad&\rm{for\; 0\leq q\leq 1}\\
+  \frac{\sigma_3}{4}(2-q)^3,&\rm{for\; 1\leq q\leq 2}\\
+  0,&\rm{for\; q>2}\\
+\end{cases}
+$$
+
+where $q=\frac{\|\mathbf{r}\|}{h}$ and $\sigma_3$ is a dimensional normalizing factor given by:
+$$
+\sigma_3=\begin{cases}
+  \frac{2}{3h},\quad&\rm{for\;dim=1}\\
+  \frac{10}{7\pi h^2},&\rm{for\;dim=2}\\
+  \frac{1}{\pi h^3},&\rm{for\;dim=2}\\
+\end{cases}
+$$
+
+#### Governing equations and their SPH formulation
+##### Continuity equation
+General form
+$$\frac{d\rho}{dt}=-\rho\nabla\cdot\mathbf{v}$$
+
+In SPH, the density is calculated as
+$$\rho_a=\sum_bm_bW_{ab}$$
+
+where $a$ is the current particle and $b$ denotes its neighbors. $W_{ab}=W(\mathbf{x}_a-\mathbf{x}_b)$ is the kernel function value between $a$ and $b$ and $\|\mathbf{x}_a-\mathbf{x}_b\|=r$ in the kernel function.
+And the derivative is
+$$\frac{d\rho_a}{dt}=\sum_bm_b\mathbf{v}_{ab}\nabla_aW_{ab}$$
+
+where $\mathbf{v}_{ab}=\mathbf{v}_a-\mathbf{v}_b$ and $\nabla_aW_{ab}=\frac{dW_{ab}}{dq}*\frac{\mathbf{x}_a-\mathbf{x}_b}{\|\mathbf{x}_a-\mathbf{x}_b\|}$ are all vectors with $q=\frac{\|\mathbf{x}_a-\mathbf{x}_b\|}{h}$.
+For this method, density changes are only due to relative motion of particles.
+##### Momentum equation
+General form
+$$\frac{d\mathbf{v}}{dt}=-\frac{1}{\rho}\nabla p+\mathbf{g}$$
+
+SPH form
+$$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})\nabla_aW_{ab}+\mathbf{g}$$
+
+##### Equation of state (EOS)
+There are different form of EOS with different conditions. In WCSPH, low compressibily is adopted.
++ Incompressibility (Poisson equation)
+  $$\nabla^2p=\rho\frac{\nabla\mathbf{v}}{\Delta t}$$
+
+  Solving this Poisson equation is time-consuming. (PCG,MGPCG)
++ High compressibility (Ideal gas equation)
+  $$p=k_p\rho\quad \rm{or} \quad p=k_p(\rho-\rho_0)$$
+
+  This method requires a pressure constant $k_p$ and results in a high compressibility.
++ Low compressibility (Tait equation)
+  $$\begin{aligned}
+    p&=B\left(\left(\frac{\rho}{\rho_0}\right)^\gamma-1\right)\\
+    B&=\frac{\rho_0 c_s^2}{\gamma}
+  \end{aligned}$$
+
+  where $\rho_0$ is the initial particle density, $c_s$ denotes the speed of sound in the fluid and $\gamma=7$ is usually adopted.
+  The relative density fluctuation follows the following relation
+  $$\frac{|\Delta\rho|}{\rho_0}=\frac{|\rho-\rho_0|}{\rho_0}\propto\frac{|\mathbf{v}_f|^2}{c_s^2}$$
+
+  where $\mathbf{v}_f$ denotes the speed of flow.
+  If the sound speed is much larger than the flow speed ($|\mathbf{v}_f|\ll c_s$), the density variation can be controlled at a low level.
+
+#### Viscosity
+Artificial viscosity is employed to improve numerical stability and to allow for shock phenomena. 
+$$\frac{d\mathbf{v}_a}{dt}=\begin{cases}
+-\sum_b m_b\Pi_{ab}\nabla_aW_{ab} \qquad&\mathbf{v}_{ab}^T\mathbf{x}_{ab}<0\\
+0 &\mathbf{v}_{ab}^T\mathbf{x}_{ab}\ge0
+\end{cases}$$
+$\Pi_{ab}$ is given as
+$$\Pi_{ab}=-\nu\left(\frac{\mathbf{v}_{ab}^T\mathbf{x}_{ab}}{|\mathbf{x}_{ab}|^2+\varepsilon h^2}\right)$$
+
+with the viscous term $\nu=\frac{2\alpha h c_s}{\rho_a+\rho_b}$ and the viscosity constant $\alpha$ is usually in between 0.08 and 0.5. $\varepsilon h^2$ is introduced to avoid singularities for $|\mathbf{x}_{ab}|=0$ with $\varepsilon=0.01$.
+
+#### Surface tension (表面张力)
+In WCSPH, a new surface tension model is adopted which relies on cohesion forces.
+$$\frac{d\mathbf{v}_a}{dt}=-\frac{\kappa}{m_a}\sum_bm_bW_{ab} \frac{\mathbf{x}_a-\mathbf{x}_k}{|\mathbf{x}_a-\mathbf{x}_k|}$$
+
+The accuracy of the above equation is doubtful and a reasonable value of $\kappa$ is unknown yet. :cry:
+Energy dissipation is a problem. Currently the particles in a rectangle will **explode** while forming a circle with only surface tension.
+![](Taichi_images/WCSPH_0500.png)
+![](Taichi_images/WCSPH_4000.png)
+![](Taichi_images/WCSPH_6500.png)
+![](Taichi_images/WCSPH_10000.png)
+
+#### Boundary particles
+$\mathbf{f}_{ak}$ is the force applied to a fluid particle $a$ that collides with a boundary particle $k$.
+$$\mathbf{f}_{ak}=\frac{m_k}{m_a+m_k}\Gamma(\mathbf{x}_a,\mathbf{x}_k)\frac{\mathbf{x}_a-\mathbf{x}_k}{|\mathbf{x}_a-\mathbf{x}_k|}$$
+$\Gamma$ is defined as 
+$$\Gamma(\mathbf{x}_a,\mathbf{x}_k)=0.02\frac{c_s^2}{|\mathbf{x}_a-\mathbf{x}_k|}*\begin{cases}
+  \frac{2}{3} & 0<q<\frac{2}{3}\\
+  (2q-\frac{3}{2}q^2)&\frac{2}{3}<q<1\\
+  \frac{1}{2}(2-q)^2&1<q<2\\
+  0 & \rm{otherwise}
+\end{cases}$$
+
+with $q=\frac{|\mathbf{x}_a-\mathbf{x}_k|}{h}$
+
+And we have
+$$\frac{d\mathbf{v}_a}{dt}=\frac{\mathbf{f}_{ak}}{m_a}$$
+
+#### Time step
+CFL condition is adopted.
+
+
+#### Computation flow
+1. Initialization
+   Initialize the position, density, velocity, pressure of each particle (fluid and boundary particles) as well as the background mesh grid (for neighborhood search).
+2. Neighborhood search
+   For each particle, compute and store its neighboring particles (number and id).
+3. Compute $\Delta$
+   **Compute $\frac{d\rho}{dt}$**
+    + [Continuity equation](#continuity-equation)
+      $$\frac{d\rho_a}{dt}=\sum_bm_b\mathbf{v}_{ab}\nabla_aW_{ab}$$
+
+      where $\mathbf{v}_{ab}=\mathbf{v}_a-\mathbf{v}_b$ and $\nabla_aW_{ab}=\frac{dW_{ab}}{dq}*\frac{\mathbf{x}_a-\mathbf{x}_b}{\|\mathbf{x}_a-\mathbf{x}_b\|}$ are all vectors with $q=\frac{\|\mathbf{x}_a-\mathbf{x}_b\|}{h}$.
+
+   **Compute $\frac{d\mathbf{v}}{dt}$**
+    + [Viscosity](#viscosity)
+      $$\frac{d\mathbf{v}_a}{dt}=\begin{cases}
+        -\sum_b m_b\Pi_{ab}\nabla_aW_{ab} \qquad&\mathbf{v}_{ab}^T\mathbf{x}_{ab}<0\\
+        0 &\mathbf{v}_{ab}^T\mathbf{x}_{ab}\ge0
+      \end{cases}$$
+
+    + [Momentum equation](#momentum-equation)
+      $$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})\nabla_aW_{ab}+\mathbf{g}$$
+
+    + [Surface tension](#surface-tension-表面张力)
+      $$\frac{d\mathbf{v}_a}{dt}=-\frac{\kappa}{m_a}\sum_bm_bW_{ab} \frac{\mathbf{x}_a-\mathbf{x}_k}{|\mathbf{x}_a-\mathbf{x}_k|}$$
+    
+    Summarize these above terms together to get the final $\frac{d\mathbf{v}}{dt}$. Surface tension is doubtful and is not suggested to use.:cry:
+4. Enforce boundary conditions
+    Refer to [boundary particles](#boundary-particles) for details.
+5. Update variables
+   **Update position (fluid particle)**
+   $$\mathbf{x}_a+=\mathbf{v}_a*\Delta t$$
+
+   **Update velocity (fluid particle)**
+   $$\mathbf{v}_a+=\frac{d\mathbf{v}}{dt}*\Delta t$$
+
+   **Update density**
+   $$\rho_a+=\frac{d\rho}{dt}*\Delta t$$
+
+   **Update pressure**
+    $$\begin{aligned}
+    p&=B\left(\left(\frac{\rho}{\rho_0}\right)^\gamma-1\right)    
+    \end{aligned}$$
+
+    with $B=\frac{\rho_0 c_s^2}{\gamma}$. Refer to [Equation of state](#equation-of-state-eos) for details.
+
+6. Update time step $\Delta t$ and return to step 2.
+
+
+### Predictive-corrective incompressible SPH (PCISPH)
+
+### Implicit incompressible SPH (IISPH)
 ### Divergence-free SPH (DFSPH)
 #### NS equations
 The incompressible, isothermal NS equations in Lagrangian coordinates is adopted.
