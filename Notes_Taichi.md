@@ -50,6 +50,7 @@
     - [Navier-Stokes equations](#navier-stokes-equations)
     - [Courant-Friedrichs-Lewy(CFL) condition](#courant-friedrichs-lewycfl-condition)
     - [Neighborhood search(NS)](#neighborhood-searchns)
+    - [SPH interpolation](#sph-interpolation)
     - [Weakly compressible SPH (WCSPH)](#weakly-compressible-sph-wcsph)
       - [Kernel function](#kernel-function)
       - [Governing equations and their SPH formulation](#governing-equations-and-their-sph-formulation)
@@ -61,7 +62,10 @@
       - [Boundary particles](#boundary-particles)
       - [Time step](#time-step)
       - [Computation flow](#computation-flow)
+      - [Drawbacks](#drawbacks)
     - [Predictive-corrective incompressible SPH (PCISPH)](#predictive-corrective-incompressible-sph-pcisph)
+      - [Density correction via pressure change](#density-correction-via-pressure-change)
+      - [Computation flow](#computation-flow-1)
     - [Implicit incompressible SPH (IISPH)](#implicit-incompressible-sph-iisph)
     - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
       - [NS equations](#ns-equations)
@@ -592,8 +596,13 @@ For low speed fluids incompressibility is assumed and the equations can be simpl
 For details of neighborhood list, refer to [Neighbour lists in smoothed particle hydrodynamics](https://ephyslab.uvigo.es/publica/documents/file_259Dominguez_etal_2010_IJNMF_DOI.pdf).
 ![](Taichi_images/SPH_NeighborList.png)
 
+### SPH interpolation
+In SPH, particles are used to interpolate a continuous function $A(\mathbf{x})$ at a position $\mathbf{x}$.
+For any continuous function $A$, the interpolation is given as
+$$A(\mathbf{x})=\sum_j m_j\frac{A(\mathbf{x}_j)}{\rho_j}W(\mathbf{x}-\mathbf{x}_j,h)$$
+
 ### Weakly compressible SPH (WCSPH)
-This method allows for small, user-defined density fluctuations rather than strictly enforcing incompressibility to save time for solving Poisson equation.
+This method allows for small, user-defined density fluctuations rather than strictly enforcing incompressibility to save time for solving Poisson equation. Actually a simplified pressure equation called Tait equation rather than pressure Poisson equation(PPE) is adopted.
 Refer to [WCSPH2007](https://www.researchgate.net/publication/220789258_Weakly_Compressible_SPH_for_Free_Surface_Flows) for more details.
 
 #### Kernel function
@@ -641,23 +650,27 @@ There are different form of EOS with different conditions. In WCSPH, low compres
 + Incompressibility (Poisson equation)
   $$\nabla^2p=\rho\frac{\nabla\mathbf{v}}{\Delta t}$$
 
-  Solving this Poisson equation is time-consuming. (PCG,MGPCG)
+  Solving this Poisson equation is time-consuming(PCG,MGPCG). Standard SPH and other methods like FVM directly solve this equation.
 + High compressibility (Ideal gas equation)
-  $$p=k_p\rho\quad \rm{or} \quad p=k_p(\rho-\rho_0)$$
+  $$p=k_p\rho\quad {\rm or} \quad p=k_p(\rho-\rho_0)$$
 
   This method requires a pressure constant $k_p$ and results in a high compressibility.
 + Low compressibility (Tait equation)
   $$\begin{aligned}
     p&=B\left(\left(\frac{\rho}{\rho_0}\right)^\gamma-1\right)\\
-    B&=\frac{\rho_0 c_s^2}{\gamma}
+    B&=\frac{k\rho_0}{\gamma}
   \end{aligned}$$
 
-  where $\rho_0$ is the initial particle density, $c_s$ denotes the speed of sound in the fluid and $\gamma=7$ is usually adopted.
-  The relative density fluctuation follows the following relation
-  $$\frac{|\Delta\rho|}{\rho_0}=\frac{|\rho-\rho_0|}{\rho_0}\propto\frac{|\mathbf{v}_f|^2}{c_s^2}$$
+  where $\rho_0$ is the initial particle density, $k$ is a stiffness parameter and $\gamma$ is another parameter.
+  Actually $k$ should be determined based on the desired density variation through test and tuning. In WCSPH, $k$ is assigned a large value $c_s^2$ where $c_s$ denotes the speed of sound in the fluid and $\gamma=7$ is adopted. 
+  $$B=\frac{c_s^2\rho_0}{\gamma}$$
+
+  This large stiffness parameter can help keep the density fluctuation small. The relative density fluctuation thus follows the following relation
+  $$\frac{|\Delta\rho|}{\rho_0}=\frac{|\rho-\rho_0|}{\rho_0} \sim \frac{|\mathbf{v}_f|^2}{c_s^2}$$
 
   where $\mathbf{v}_f$ denotes the speed of flow.
-  If the sound speed is much larger than the flow speed ($|\mathbf{v}_f|\ll c_s$), the density variation can be controlled at a low level.
+  If the sound speed is much larger than the flow speed ($c_s\gg|\mathbf{v}_f|$), the density variation can be controlled at a low level. Define $\eta < \frac{|\mathbf{v}_f|^2}{c_s^2}$ and $\eta=0.01$ is usually chosen to control the density variations of the order of 1%. 
+  However, large stiffness results in smaller time step and increases overall computation cost.
 
 #### Viscosity
 Artificial viscosity is employed to improve numerical stability and to allow for shock phenomena. 
@@ -700,7 +713,6 @@ $$\frac{d\mathbf{v}_a}{dt}=\frac{\mathbf{f}_{ak}}{m_a}$$
 #### Time step
 CFL condition is adopted.
 
-
 #### Computation flow
 1. Initialization
    Initialize the position, density, velocity, pressure of each particle (fluid and boundary particles) as well as the background mesh grid (for neighborhood search).
@@ -713,17 +725,17 @@ CFL condition is adopted.
 
       where $\mathbf{v}_{ab}=\mathbf{v}_a-\mathbf{v}_b$ and $\nabla_aW_{ab}=\frac{dW_{ab}}{dq}*\frac{\mathbf{x}_a-\mathbf{x}_b}{\|\mathbf{x}_a-\mathbf{x}_b\|}$ are all vectors with $q=\frac{\|\mathbf{x}_a-\mathbf{x}_b\|}{h}$.
 
-   **Compute $\frac{d\mathbf{v}}{dt}$**
-    + [Viscosity](#viscosity)
+   **Compute $\frac{d\mathbf{v}}{dt}$**(Actually forces)
+    + [Viscosity](#viscosity)(Viscosity force)
       $$\frac{d\mathbf{v}_a}{dt}=\begin{cases}
         -\sum_b m_b\Pi_{ab}\nabla_aW_{ab} \qquad&\mathbf{v}_{ab}^T\mathbf{x}_{ab}<0\\
         0 &\mathbf{v}_{ab}^T\mathbf{x}_{ab}\ge0
       \end{cases}$$
 
-    + [Momentum equation](#momentum-equation)
+    + [Momentum equation](#momentum-equation)(Pressure force & Body force)
       $$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})\nabla_aW_{ab}+\mathbf{g}$$
 
-    + [Surface tension](#surface-tension-表面张力)
+    + [Surface tension](#surface-tension-表面张力)(Surface tension)
       $$\frac{d\mathbf{v}_a}{dt}=-\frac{\kappa}{m_a}\sum_bm_bW_{ab} \frac{\mathbf{x}_a-\mathbf{x}_k}{|\mathbf{x}_a-\mathbf{x}_k|}$$
     
     Summarize these above terms together to get the final $\frac{d\mathbf{v}}{dt}$. Surface tension is doubtful and is not suggested to use.:cry:
@@ -747,9 +759,36 @@ CFL condition is adopted.
     with $B=\frac{\rho_0 c_s^2}{\gamma}$. Refer to [Equation of state](#equation-of-state-eos) for details.
 
 6. Update time step $\Delta t$ and return to step 2.
+   $$\Delta t=C_{cfl}*\min\left[\frac{dh}{v_{max}},\sqrt{\frac{dh}{a_{max}}},\frac{dh}{c_s*\sqrt{(\frac{\rho_{max}}{\rho_0})^\gamma}}\right]$$
+
+   $C_{cfl}$ is commonly set to 0.2.
+
+#### Drawbacks
++ Stiffness value is difficult to determine before running the simulation. Thus parameter tuning is inevitable.
++ WCSPH imposes a severe time step restriction because of the large stiffness value. The larger the smaller time step it will be based on CFL condition.
 
 
 ### Predictive-corrective incompressible SPH (PCISPH)
+This method allows for small density fluctuations like WCSPH. A prediction-correction scheme is adopted to obtain a **larger time step** than WCSPH. Iteration is needed during the correction process until all particle density fluctuations are smaller than a given threshold.
+
+#### Density correction via pressure change
+A density prediction-correction scheme is adopted to control the density variance. This involves direct prediction and following correction loop.
+A scaling factor $\delta$ is precomputed for a **prototype particle** with a filled neighborhood and is  used for **all** particles including those without a filled neighborhood like the particles on the free surface.
+$$\delta=\frac{-1}{\beta(-\sum_j\nabla W_{ij}\cdot\sum_j\nabla W_{ij}-\sum_j(\nabla W_{ij}\cdot\nabla W_{ij}))}$$
+
+where $\beta=\Delta t^2 m^2 \frac{2}{\rho_0^2}$.
+And the corrective pressure $\tilde p_i$ which aims to correct the density variation is given as
+$$\tilde p_i=\delta\rho^*_{err_i}$$
+
+where $\rho^*_{err_i}=\rho^*_i-\rho_0$ is the predicted density error of a particle.
+And the corrected pressure is updated
+$$p_i+=\tilde p_i$$
+
+This prediction-correction process will repeat until the density variance of each particle reaches the desired threshold.
+
+#### Computation flow
+1. 
+
 
 ### Implicit incompressible SPH (IISPH)
 ### Divergence-free SPH (DFSPH)
