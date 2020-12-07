@@ -609,9 +609,9 @@ Refer to [WCSPH2007](https://www.researchgate.net/publication/220789258_Weakly_C
 A commonly used kernel function in SPH is the cubic spline kernel [Monaghan1992](http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf)(*actually there are many kinds of cubic spline kernels*:joy:):
 $$
 W(q)=\begin{cases}
-  \sigma_3[1-\frac{3}{2}q^2+\frac{3}{4}q^3],\quad&\rm{for\; 0\leq q\leq 1}\\
-  \frac{\sigma_3}{4}(2-q)^3,&\rm{for\; 1\leq q\leq 2}\\
-  0,&\rm{for\; q>2}\\
+  \sigma_3[1-\frac{3}{2}q^2+\frac{3}{4}q^3],\quad&\rm{for\; 0\leq q< 1}\\
+  \frac{\sigma_3}{4}(2-q)^3,&\rm{for\; 1\leq q< 2}\\
+  0,&\rm{for\; q\ge 2}\\
 \end{cases}
 $$
 
@@ -759,7 +759,7 @@ CFL condition is adopted.
     with $B=\frac{\rho_0 c_s^2}{\gamma}$. Refer to [Equation of state](#equation-of-state-eos) for details.
 
 6. Update time step $\Delta t$ and return to step 2.
-   $$\Delta t=C_{cfl}*\min\left[\frac{dh}{v_{max}},\sqrt{\frac{dh}{a_{max}}},\frac{dh}{c_s*\sqrt{(\frac{\rho_{max}}{\rho_0})^\gamma}}\right]$$
+   $$\Delta t=C_{cfl}*\min\left[\frac{dh}{v_{\max}},\sqrt{\frac{dh}{a_{\max}}},\frac{dh}{c_s*\sqrt{(\frac{\rho_{\max}}{\rho_0})^\gamma}}\right]$$
 
    $C_{cfl}$ is commonly set to 0.2.
 
@@ -776,7 +776,7 @@ A density prediction-correction scheme is adopted to control the density varianc
 A scaling factor $\delta$ is precomputed for a **prototype particle** with a filled neighborhood and is  used for **all** particles including those without a filled neighborhood like the particles on the free surface.
 $$\delta=\frac{-1}{\beta(-\sum_j\nabla W_{ij}\cdot\sum_j\nabla W_{ij}-\sum_j(\nabla W_{ij}\cdot\nabla W_{ij}))}$$
 
-where $\beta=\Delta t^2 m^2 \frac{2}{\rho_0^2}$.
+where $\beta=\Delta t^2 m^2 \frac{2}{\rho_0^2}$ and $\nabla W_{ij}=\frac{dW_{ij}}{dq}*\frac{\mathbf{x}_i-\mathbf{x}_j}{\|\mathbf{x}_i-\mathbf{x}_j\|}$ with $q=\frac{\|\mathbf{x}_i-\mathbf{x}_j\|}{h}$.
 And the corrective pressure $\tilde p_i$ which aims to correct the density variation is given as
 $$\tilde p_i=\delta\rho^*_{err_i}$$
 
@@ -787,7 +787,78 @@ $$p_i+=\tilde p_i$$
 This prediction-correction process will repeat until the density variance of each particle reaches the desired threshold.
 
 #### Computation flow
-1. 
+1. Initialization
+
+**Iteration 1** While $t<t_{\max}$:
+
+2. Neighborhood search
+3. Compute $\frac{d\mathbf{v}}{dt}$(Actually forces)
+      + [Viscosity](#viscosity)(Viscosity force)
+      $$\frac{d\mathbf{v}_a}{dt}=\begin{cases}
+        -\sum_b m_b\Pi_{ab}\nabla_aW_{ab} \qquad&\mathbf{v}_{ab}^T\mathbf{x}_{ab}<0\\
+        0 &\mathbf{v}_{ab}^T\mathbf{x}_{ab}\ge0
+      \end{cases}$$
+
+      + Body force
+      $$\frac{d\mathbf{v}_a}{dt}=\mathbf{g}$$
+
+      Summarize these together $\frac{d\mathbf{v}_i}{dt}={\rm Viscosity+Body}$ to get the final acceleration of each particle without the contribution of pressure.(Pressure force changes during the iteration thus not precomputed here.)
+4. Initialize pressure
+      $$p_i=0\quad{\rm and}\quad\frac{d\mathbf{v}_{ip}}{dt}=0$$
+
+      where $p_i$ denotes the pressure of each particle and $\frac{d\mathbf{v}_{ip}}{dt}$ denotes the acceleration of each particle caused by pressure force which changes during iteration.
+5. Compute [scaling factor](#density-correction-via-pressure-change)
+      $$\delta=\frac{-1}{\beta(-\sum_j\nabla W_{ij}\cdot\sum_j\nabla W_{ij}-\sum_j(\nabla W_{ij}\cdot\nabla W_{ij}))}$$
+
+      > This is computed for a prototype particle with a filled neighborhood and is used for all particles. It is still unclear what the prototype particle looks like.:cry:
+
+**Iteration 2** While $\rho^*_{err\max} > {\rm threshold}$:
+
+6. Compute predicted variables
+   + Compute predicted velocity
+     $$\mathbf{v}^*_i=\mathbf{v}_i+\Delta t (\frac{d\mathbf{v}_i}{dt}+\frac{d\mathbf{v}_{ip}}{dt})$$
+
+     where $*$ denotes predicted value, $i$ denotes each particle and $\frac{d\mathbf{v}_{ip}}{dt}$ denotes acceleration resulting from pressure force.
+   + Compute predicted position
+     $$\mathbf{x}_i^*=\mathbf{x}_i+\Delta t\mathbf{v}_i^*$$
+
+    > Note: $\mathbf{v}_i$, $\mathbf{x}_i$ and the following $\rho_i$ keep unchanged during iteration 2.
+
+7. Compute corrected pressure
+   + Compute $\frac{d\rho}{dt}$
+    [Continuity equation](#continuity-equation)
+    $$\frac{d\rho_i}{dt}=\sum_jm_j\mathbf{v}_{ij}\nabla W_{ij}$$
+     
+    > In the given code, $m_j$ is not considered in the equation. Still unclear the reason behind that.:cry:
+   + Compute predicted density
+     $$\rho^*_i=\rho_i+\Delta t\frac{d\rho}{dt}$$
+   + Compute density error
+     $$\rho^*_{erri}=\rho^*_i-\rho_{0i}$$
+   + Update predicted pressure
+     $$p_i+=\delta\rho^*_{erri}$$
+
+8. Compute new pressure force
+   $$\frac{d\mathbf{v}_{ip}}{dt}=-\sum_jm_j(\frac{p_i}{\rho_i^2}+\frac{p_j}{\rho_j^2})\nabla W_{ij}$$
+
+**End Iteration 2**
+
+9. Update variables
+   $$\begin{aligned}
+     \mathbf{v}_i&+=\Delta t (\frac{d\mathbf{v}_i}{dt}+\frac{d\mathbf{v}_{ip}}{dt})\\
+     \mathbf{x}_i&+=\mathbf{x}_i+\Delta t \mathbf{v}_i\\
+     \rho_i&+=\Delta t \frac{d\rho_i}{dt}\\
+   \end{aligned}$$
+10. Enforce [boundary particles](#boundary-particles) (Same as WCSPH)
+11. Adapt time step $\Delta t$
+    $$\Delta t=\min\left[C_{CFLv}\frac{dh}{v_{\max}},C_{CFLa}\sqrt{\frac{dh}{a_{\max}}}\right]$$
+
+    > Usually $C_{CFLv}=0.25$ and $C_{CFLa}=0.05$.
+
+**End Iteration 1**
+
+
+
+
 
 
 ### Implicit incompressible SPH (IISPH)
