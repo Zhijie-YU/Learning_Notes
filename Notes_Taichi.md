@@ -648,7 +648,7 @@ $$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})
 ##### Equation of state (EOS)
 There are different form of EOS with different conditions. In WCSPH, low compressibily is adopted.
 + Incompressibility (Poisson equation)
-  $$\nabla^2p=\rho\frac{\nabla\mathbf{v}}{\Delta t}$$
+  $$\nabla^2p=\rho\frac{\nabla\cdot\mathbf{v}}{\Delta t}$$
 
   Solving this Poisson equation is time-consuming(PCG,MGPCG). Standard SPH and other methods like FVM directly solve this equation.
 + High compressibility (Ideal gas equation)
@@ -658,11 +658,11 @@ There are different form of EOS with different conditions. In WCSPH, low compres
 + Low compressibility (Tait equation)
   $$\begin{aligned}
     p&=B\left(\left(\frac{\rho}{\rho_0}\right)^\gamma-1\right)\\
-    B&=\frac{k\rho_0}{\gamma}
+    B&=\frac{\kappa\rho_0}{\gamma}
   \end{aligned}$$
 
-  where $\rho_0$ is the initial particle density, $k$ is a stiffness parameter and $\gamma$ is another parameter.
-  Actually $k$ should be determined based on the desired density variation through test and tuning. In WCSPH, $k$ is assigned a large value $c_s^2$ where $c_s$ denotes the speed of sound in the fluid and $\gamma=7$ is adopted. 
+  where $\rho_0$ is the initial particle density, $\kappa$ is a stiffness parameter and $\gamma$ is another parameter.
+  Actually $\kappa$ should be determined based on the desired density variation through test and tuning. In WCSPH, $\kappa$ is assigned a large value $\kappa=c_s^2$ where $c_s$ denotes the speed of sound in the fluid and $\gamma=7$ is adopted. 
   $$B=\frac{c_s^2\rho_0}{\gamma}$$
 
   This large stiffness parameter can help keep the density fluctuation small. The relative density fluctuation thus follows the following relation
@@ -770,6 +770,7 @@ CFL condition is adopted.
 
 ### Predictive-corrective incompressible SPH (PCISPH)
 This method allows for small density fluctuations like WCSPH. A prediction-correction scheme is adopted to obtain a **larger time step** than WCSPH. Iteration is needed during the correction process until all particle density fluctuations are smaller than a given threshold.
+Pressure is obtained by continuous correction rather than solving a PPE.
 
 #### Density correction via pressure change
 A density prediction-correction scheme is adopted to control the density variance. This involves direct prediction and following correction loop.
@@ -856,12 +857,9 @@ This prediction-correction process will repeat until the density variance of eac
 
 **End Iteration 1**
 
-
-
-
-
-
 ### Implicit incompressible SPH (IISPH)
+Implicit
+
 ### Divergence-free SPH (DFSPH)
 #### NS equations
 The incompressible, isothermal NS equations in Lagrangian coordinates is adopted.
