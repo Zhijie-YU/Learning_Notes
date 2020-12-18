@@ -67,6 +67,11 @@
       - [Density correction via pressure change](#density-correction-via-pressure-change)
       - [Computation flow](#computation-flow-1)
     - [Implicit incompressible SPH (IISPH)](#implicit-incompressible-sph-iisph)
+      - [Continuity equation in IISPH](#continuity-equation-in-iisph)
+      - [Pressure and non-pressure force](#pressure-and-non-pressure-force)
+      - [Semi-implicit scheme](#semi-implicit-scheme)
+      - [Rigid-fluid coupling](#rigid-fluid-coupling)
+      - [Computation flow](#computation-flow-2)
     - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
       - [NS equations](#ns-equations)
       - [DFSPH cases](#dfsph-cases)
@@ -289,11 +294,6 @@ $$
 \mathbf{x}_{t+1}&=\mathbf{x}_t+\Delta t\mathbf{v}_{t+1}\\
 \end{aligned}
 $$
-
-```py
-# mass_spring.py
-
-```
 
 :three: Backward Euler (often with Newton's method, implicit)
 
@@ -624,6 +624,9 @@ $$
 \end{cases}
 $$
 
+And the gradient of the kernel function $\nabla W_{ij}$ which is commonly used in SPH is derived as
+$$\nabla W_{ij}=\frac{dW_{ij}}{dq}*\frac{\mathbf{r}}{\|\mathbf{r}\|}=\frac{dW_{ij}}{dq}*\frac{\mathbf{x}_i-\mathbf{x}_j}{\|\mathbf{x}_i-\mathbf{x}_j\|}$$
+
 #### Governing equations and their SPH formulation
 ##### Continuity equation
 General form
@@ -642,7 +645,7 @@ For this method, density changes are only due to relative motion of particles.
 General form
 $$\frac{d\mathbf{v}}{dt}=-\frac{1}{\rho}\nabla p+\mathbf{g}$$
 
-SPH form
+SPH form (Pressure force + Body force)
 $$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})\nabla_aW_{ab}+\mathbf{g}$$
 
 ##### Equation of state (EOS)
@@ -811,7 +814,7 @@ This prediction-correction process will repeat until the density variance of eac
 5. Compute [scaling factor](#density-correction-via-pressure-change)
       $$\delta=\frac{-1}{\beta(-\sum_j\nabla W_{ij}\cdot\sum_j\nabla W_{ij}-\sum_j(\nabla W_{ij}\cdot\nabla W_{ij}))}$$
 
-      > This is computed for a prototype particle with a filled neighborhood and is used for all particles. It is still unclear what the prototype particle looks like.:cry:
+      > This is computed for a **prototype particle** with a filled neighborhood and is used for all particles. It is still unclear what the prototype particle looks like.:cry:
 
 **Iteration 2** While $\rho^*_{err\max} > {\rm threshold}$:
 
@@ -856,9 +859,150 @@ This prediction-correction process will repeat until the density variance of eac
     > Usually $C_{CFLv}=0.25$ and $C_{CFLa}=0.05$.
 
 **End Iteration 1**
+> Note :dog: about implementation
+> + The neighborhood search is only executed once for each time step and the neighbor information is reused in the prediction process.
+> + A minimum number of iteration is used in the prediction correction loop to limit temporal fluctuations in the pressure field. 3 is chosen as the minimum number.
+
+The comparison of algorithms used in WCSPH and PCISPH is summarized below.
+![](Taichi_images/WCSPH_PCISPH.png)
+
 
 ### Implicit incompressible SPH (IISPH)
-Implicit
+IISPH adopts a **semi-implicit** scheme. The semi-implicit scheme is achieved by separating non-pressure forces and pressure forces apart with an intermediate state. For non-pressure forces, the intermediate state is explicitly achieved. For pressure forces, a linear system of equations should be implicitly resolved.
+This system of linear equations is solved for pressure using relaxed Jacobi iteration method while enforcing the constant density condition.
+
+#### Continuity equation in IISPH
+For continuity equation
+$$\frac{D\rho}{Dt}=-\rho\nabla\cdot\mathbf{v}$$
+
+The terms of it can be expressed as
+$$\begin{aligned}
+  \frac{D\rho_i}{Dt}&=\frac{\rho_i(t+\Delta t)-\rho_i(t)}{\Delta t}\\
+  \nabla\cdot\mathbf{v}_i&=-\frac{1}{\rho_i}\sum_jm_j\mathbf{v}_{ij}\nabla W_{ij}\\
+\end{aligned}$$
+
+Thus the continuity equation can be rewritten in IISPH as
+$$\frac{\rho_i(t+\Delta t)-\rho_i(t)}{\Delta t}=\sum_jm_j\mathbf{v}_{ij}(t+\Delta t)\nabla W_{ij}$$
+
+where $\mathbf{v}_{ij}(t+\Delta t)=\mathbf{v}_i(t+\Delta t)-\mathbf{v}_j(t+\Delta t)$.
+
+#### Pressure and non-pressure force
+For the continuity equation in IISPH
+$$\mathbf{v}_i(t+\Delta t)=\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_i^{adv}(t)+\mathbf{F}_i^p(t)}{m_i}$$
+
+where $\mathbf{F}_i^{p}(t)$ is the pressure force and $\mathbf{F}_i^{adv}(t)$ is the non-pressure force including [viscosity](#viscosity), body force($g$) and [surface tension](#surface-tension-表面张力).
+Non-pressure force is known and can be obtained by
+$$\mathbf{F}_i^{adv}(t)=\mathbf{F}^{viscosity}_i(t)+m_ig+\mathbf{F}^{surface tension}_i(t)$$
+
+Pressure force is unknown and can be expressed (similar to [momentum equation](#momentum-equation)) as
+$$\mathbf{F}_i^{p}(t)=-m_i\sum_jm_j\left(\frac{p_i(t)}{\rho_i^2(t)}+\frac{p_j(t)}{\rho_j^2(t)}\right)\nabla W_{ij}(t)$$
+
+where pressure $p(t)$ is unknown.
+> For each particle in SPH, $m,\rho,\mathbf{v},\mathbf{x},p$ are the 5 key particle features. In IISPH, $m,\rho$ assume unchanged during the process and the key point is to solve for pressure.
+
+#### Semi-implicit scheme
+Based on the above equations, a semi-implicit scheme can be derived.
+**Explicit part**
+An **intermediate state** is introduced where the known non-pressure force is firstly used to get the intermediate velocity $\mathbf{v}_i^{adv}$ and density $\rho_i^{adv}$.
+$$\begin{aligned}
+  \mathbf{v}_i^{adv}&=\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_i^{adv}(t)}{m_i}\\
+  \frac{\rho_i^{adv}-\rho_i(t)}{\Delta t}=\sum_jm_j\mathbf{v}^{adv}_{ij}\nabla W_{ij}(t) \Rightarrow \rho_i^{adv}&=\rho_i(t)+\Delta t\sum_jm_j\mathbf{v}^{adv}_{ij}\nabla W_{ij}(t)
+\end{aligned}$$
+
+where $\mathbf{v}^{adv}_{ij}=\mathbf{v}^{adv}_{i}-\mathbf{v}^{adv}_{j}$.
+**Implicit part**
+Based on the intermediate state, pressure force is involved in the implicit part to solve for unknown pressure.
+$$\Delta t^2\sum_jm_j\left(\frac{\mathbf{F}_i^p(t)}{m_i}-\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}(t)=\rho_0-\rho_i^{adv}$$
+
+> The derivation of the above equation is based on the continuity equation and the assumption that $\rho_i(t+\Delta t)=\rho_0$.
+> $$\begin{aligned}
+  \frac{\rho_i(t+\Delta t)-\rho_i(t)}{\Delta t}&=\sum_jm_j\mathbf{v}_{ij}(t+\Delta t)\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\sum_jm_j\mathbf{v}_{ij}(t+\Delta t)\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\sum_jm_j(\mathbf{v}_{i}(t+\Delta t)-\mathbf{v}_{j}(t+\Delta t))\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\sum_jm_j\left[\left(\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_i^{adv}(t)}{m_i}+\Delta t\frac{\mathbf{F}_i^p(t)}{m_i}\right)-\left(\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_j^{adv}(t)}{m_j}+\Delta t\frac{\mathbf{F}_j^p(t)}{m_j}\right)\right]\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\sum_jm_j\left[\left(\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_i^{adv}(t)}{m_i}\right)-\left(\mathbf{v}_i(t)+\Delta t\frac{\mathbf{F}_j^{adv}(t)}{m_j}\right)\right]\nabla W_{ij}+\sum_jm_j\left(\Delta t\frac{\mathbf{F}_i^p(t)}{m_i}-\Delta t\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\sum_jm_j(\mathbf{v}_i^{adv}-\mathbf{v}_j^{adv})\nabla W_{ij}+\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p(t)}{m_i}-\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i(t)}{\Delta t}&=\frac{\rho_i^{adv}-\rho_i(t)}{\Delta t}+\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p(t)}{m_i}-\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}\\
+  \frac{\rho_0-\rho_i^{adv}}{\Delta t}&=\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p(t)}{m_i}-\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}\\
+  \rho_0-\rho_i^{adv}&=\Delta t^2\sum_jm_j\left(\frac{\mathbf{F}_i^p(t)}{m_i}-\frac{\mathbf{F}_j^p(t)}{m_j}\right)\nabla W_{ij}\\
+\end{aligned}$$
+
+Substitute the pressure force in the above equation, we have
+$$\begin{aligned}
+  \rho_0-\rho_i^{adv}&=\Delta t^2\sum_jm_j((-\sum_jm_j\left(\frac{p_i(t)}{\rho_i^2(t)}+\frac{p_j(t)}{\rho_j^2(t)}\right)\nabla W_{ij})-(-\sum_km_k\left(\frac{p_j(t)}{\rho_j^2(t)}+\frac{p_k(t)}{\rho_k^2(t)}\right)\nabla W_{jk}))\nabla W_{ij}\\
+  &=\sum_jm_j\left((-\Delta t^2\sum_j\frac{m_j}{\rho_i^2}\nabla W_{ij})p_i+\sum_j(-\Delta t^2\frac{m_j}{\rho_j^2}\nabla W_{ij}p_j)-(-\Delta t^2\sum_k\frac{m_k}{\rho_j^2}\nabla W_{jk})p_j-\sum_k(-\Delta t^2\frac{m_k}{\rho_k^2}\nabla W_{jk}p_k)\right)\nabla W_{ij}\\
+  &=\sum_jm_j(\mathbf{d}_{ii}p_i+\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_k\mathbf{d}_{jk}p_k)\nabla W_{ij}
+\end{aligned}$$
+
+with
+$$\begin{aligned}
+  \mathbf{d}_{ii}&=-\Delta t^2\sum_j\frac{m_j}{\rho_i^2}\nabla W_{ij}\\
+  \mathbf{d}_{ij}&=-\Delta t^2\frac{m_j}{\rho_j^2}\nabla W_{ij}\\
+\end{aligned}$$
+
+The above equation can be further written as the following form by extracting unknown pressure. ==[KEY EQUATION]==
+$$\begin{aligned}
+  \rho_0-\rho_i^{adv}&=\sum_jm_j(\mathbf{d}_{ii}p_i+\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_k\mathbf{d}_{jk}p_k)\nabla W_{ij}\\
+  &=p_i\sum_jm_j(\mathbf{d}_{ii}-\mathbf{d}_{ji})\nabla W_{ij}+\sum_jm_j(\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_{k\neq i}\mathbf{d}_{jk}p_k)\nabla W_{ij}
+\end{aligned}$$
+
+Thus this can be written in matrix form
+$$\mathbf{A}(t)\mathbf{p}(t)=\mathbf{b}(t)$$
+
+where $\mathbf{b}(t)=[\rho_0-\rho_1^{adv},\rho_0-\rho_2^{adv},\dots]^T$ and $\mathbf{p}(t)=[p_1,p_2,\dots]^T$ are the unknowns.
+For this system of linear equations, **relaxed Jacobi** method is adopted.
+The coefficient matrix is divided into diagonal and non-diagonal matrices with $n$ denoting the total number of particles.
+$$\mathbf{A}(t)=\mathbf{D}+\mathbf{R}$$
+
+where
+$$\mathbf{D}=\begin{bmatrix}
+  a_{11} & 0 & \cdots & 0\\
+  0 & a_{22} & \cdots & 0\\
+  \vdots & \vdots & \ddots & \vdots\\
+  0 & 0 & \cdots & a_{nn}\\
+\end{bmatrix}$$
+
+$$\mathbf{R}=\begin{bmatrix}
+  0 & a_{12} & \cdots & a_{1n}\\
+  a_{21} & 0 & \cdots & a_{2n}\\
+  \vdots & \vdots & \ddots & \vdots\\
+  a_{n1} & a_{n2} & \cdots & 0\\
+\end{bmatrix}$$
+
+With relaxed Jaboci method, the iteration equation is expressed as
+$$\mathbf{p}^{l+1}(t)=(1-\omega)\mathbf{p}^l(t)+\omega\mathbf{D}^{-1}(\mathbf{b}(t)-\mathbf{R}\mathbf{p}^l(t))$$
+
+where $l$ denotes iteration index and $\omega$ denotes relaxation factor.
+
+> Actually, this relaxed Jacobi method is probably known as successive over relaxation method (**SOR**). For this method, the system itself should fullfill some conditions to ensure convergence like the coefficient matrix $\mathbf{A}$ should be a strictly diagonally dominant matrix, etc. However in IISPH, these conditions are not considered rigorously. From my point of view, further provement should be added.
+
+Each line (each particle) of this system of linear equations can be written as
+$$\sum_j a_{ij}p_j=\rho_0-\rho_i^{adv}$$
+
+where $a_{ii}=\sum_jm_j(\mathbf{d}_{ii}-\mathbf{d}_{ji})\nabla W_{ij}$ and $\sum_{j\neq i}a_{ij}p_j=\sum_jm_j(\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_{k\neq i}\mathbf{d}_{jk}p_k)\nabla W_{ij}$ can be derived from the key equation.
+And the corresponding iteration equation is expressed as
+$$\begin{aligned}
+  p_i^{l+1}&=(1-\omega)p_i^l+\omega\frac{\rho_0-\rho_i^{adv}-\sum_{j\neq i}a_{ij}p_j^l}{a_{ii}}\\
+  &=(1-\omega)p_i^l+\frac{\omega}{a_{ii}}\left(\rho_0-\rho_i^{adv}-\sum_jm_j(\sum_j\mathbf{d}_{ij}p_j^l-\mathbf{d}_{jj}p_j^l-\sum_{k\neq i}\mathbf{d}_{jk}p_k^l)\nabla W_{ij}\right)
+\end{aligned}$$
+
+This iteration will not terminate until the error is smaller than the given threshold.
+Usually average density $\rho_{avg}^l=\frac{\sum_i \rho_i^l}{n}$ is predicted and used to compute residual.
+$$\rho_i^l=\sum_jm_j(\mathbf{d}_{ii}p_i+\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_k\mathbf{d}_{jk}p_k)\nabla W_{ij}+\rho_i^{adv}$$
+
+#### Rigid-fluid coupling
+To be continue...
+
+#### Computation flow
+![](Taichi_images/IISPH_alg.png)
+> Notes :dog: about implementation:
+> + The relaxation factor $\omega$ is difficult to determine in SOR. Usually trial and error are adopted to search for an optimal value regarding convergence.
+In IISPH, $\omega=0.5$ is adopted. 
+> + The initial pressure for the iteration is chosen as $p_i^0=0.5p_i(t-\Delta t)$ for convergence.
+> + For each particle, 7 scalars are computed and stored for 3D cases, namely $a_{ii}$, $\mathbf{d}_{ii}$ and $\sum_j\mathbf{d}_{ij}p_j^l$ in each iteration.
+> + In the iteration equation, $\sum_{k\neq i}\mathbf{d}_{jk}p_k^l=\sum_k\mathbf{d}_{jk}p_k^l-\mathbf{d}_{ji}p_i^l$. Thus the term $\sum_k\mathbf{d}_{jk}p_k^l$ can be accessed from particle without computation and only $\mathbf{d}_{ji}=-\Delta t^2\frac{m_i}{\rho_i^2}\nabla W_{ji}$ should be computed.
+> + In each iteration, pressure clamping is adopted, i.e. $p_i^l=\max(0,p_i^l)$.
+> + During the process, particle mass $m_i$ and density $\rho_i$ keep unchanged. Whether predicted density should be used is unclear yet :cry:. Currently we choose to use $\rho_0$ during the whole process.
 
 ### Divergence-free SPH (DFSPH)
 #### NS equations
@@ -940,159 +1084,7 @@ To know more about **APIC** and its difference with **PIC** and **FLIP**, refer 
 PIC is almost never used in graphics.
 APIC is suggested to start with.
 
-```py
-# pic_vs_apic.py
-# In this program, initial velocities is given. How to enforce forces?
-import taichi as ti
-import random
-ti.init(arch=ti.gpu)
-
-dim = 2
-n_particles = 8192
-# number of grid points along each axis
-n_grid = 32
-dx = 1 / n_grid
-inv_dx = 1 / dx
-dt = 2.0e-3
-use_apic = False
-
-# coordinates of particles
-x = ti.Vector.field(dim, dtype=ti.f32, shape=n_particles)
-# velocities of particles
-v = ti.Vector(dim, dt=ti.f32, shape=n_particles)
-C = ti.Matrix(dim, dim, dt=ti.f32, shape=n_particles)
-grid_v = ti.Vector(dim, dt=ti.f32, shape=(n_grid, n_grid))
-#grid_m = ti.var(dt=ti.f32, shape=(n_grid, n_grid))
-grid_m = ti.field(dtype=ti.f32, shape=(n_grid, n_grid))
-
-@ti.func
-def clamp_pos(pos):
-    return ti.Vector([max(min(0.95, pos[0]), 0.05), max(min(0.95, pos[1]), 0.05)])
-
-@ti.kernel
-def substep_PIC():
-    # P2G
-    for p in x:
-        # create a local coordinate system, base as the origin
-        base = (x[p] * inv_dx - 0.5).cast(int)
-        fx = x[p] * inv_dx - base.cast(float)
-        # Quadratic B-spline (quadratic kernel)
-        # assume particle mass is 1.
-        w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-        for i in ti.static(range(3)):
-            for j in ti.static(range(3)):
-                offset = ti.Vector([i, j])
-                weight = w[i][0] * w[j][1]
-                grid_v[base + offset] += weight * v[p]
-                grid_m[base + offset] += weight
-    # Grid normalization
-    for i, j in grid_m:
-        if grid_m[i, j] > 0:
-            inv_m = 1 / grid_m[i, j]
-            grid_v[i, j] = inv_m * grid_v[i, j]
-    # G2P
-    for p in x:
-        base = (x[p] * inv_dx - 0.5).cast(int)
-        fx = x[p] * inv_dx - base.cast(float)
-        # Quadratic B-spline
-        w = [
-            0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
-        ]
-        new_v = ti.Vector.zero(ti.f32, 2)
-        for i in ti.static(range(3)):
-            for j in ti.static(range(3)):
-                weight = w[i][0] * w[j][1]
-                new_v += weight * grid_v[base + ti.Vector([i, j])]
-
-        x[p] = clamp_pos(x[p] + v[p] * dt)
-        v[p] = new_v
-
-@ti.kernel
-def substep_APIC():
-    for p in x:
-        base = (x[p] * inv_dx - 0.5).cast(int)
-        fx = x[p] * inv_dx - base.cast(float)
-        # Quadratic B-spline
-        w = [0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1) ** 2, 0.5 * (fx - 0.5) ** 2]
-        affine = C[p]
-        for i in ti.static(range(3)):
-            for j in ti.static(range(3)):
-                offset = ti.Vector([i, j])
-                dpos = (offset.cast(float) - fx) * dx
-                weight = w[i][0] * w[j][1]
-                grid_v[base + offset] += weight * (v[p] + affine @ dpos)
-                grid_m[base + offset] += weight
-    
-    for i, j in grid_m:
-        if grid_m[i, j] > 0:
-            inv_m = 1 / grid_m[i, j]
-            grid_v[i, j] = inv_m * grid_v[i, j]
-    
-    for p in x:
-        base = (x[p] * inv_dx - 0.5).cast(int)
-        fx = x[p] * inv_dx - base.cast(float)
-        # Quadratic B-spline
-        w = [
-            0.5 * (1.5 - fx) ** 2, 0.75 - (fx - 1.0) ** 2, 0.5 * (fx - 0.5) ** 2
-        ]
-        new_v = ti.Vector.zero(ti.f32, 2)
-        new_C = ti.Matrix.zero(ti.f32, 2, 2)
-        for i in ti.static(range(3)):
-            for j in ti.static(range(3)):
-                # the dx in dpos is eliminated in the computation of new_C!!
-                dpos = ti.Vector([i, j]).cast(float) - fx
-                g_v = grid_v[base + ti.Vector([i, j])]
-                weight = w[i][0] * w[j][1]
-                new_v += weight * g_v
-                # where is dx^2 ?? only 1 inv_dx is presented here!!
-                # the other dx is eliminated with that in dpos.
-                new_C += 4 * weight * g_v.outer_product(dpos) * inv_dx
-
-        x[p] = clamp_pos(x[p] + new_v * dt)
-        v[p] = new_v
-        C[p] = new_C
-
-@ti.kernel
-def reset(mode: ti.i32):
-    for i in range(n_particles):
-        x[i] = [ti.random() * 0.6 + 0.2, ti.random() * 0.6 + 0.2]
-        if mode == 0:
-            v[i] = [1, 0]
-        elif mode == 1:
-            v[i] = [x[i][1] - 0.5, 0.5 - x[i][0]]
-        elif mode == 2:
-            v[i] = [0, x[i][0] - 0.5]
-        else:
-            v[i] = [0, x[i][1] - 0.5]
-        
-reset(1)
-
-gui = ti.GUI("PIC v.s. APIC", (512, 512))
-for frame in range(2000000):
-    if gui.get_event(ti.GUI.PRESS):
-        if gui.event.key == 't': reset(0)
-        elif gui.event.key == 'r': reset(1)
-        elif gui.event.key == 's': reset(2)
-        elif gui.event.key == 'd': reset(3)
-        elif gui.event.key in [ti.GUI.ESCAPE, ti.GUI.EXIT]: break
-        elif gui.event.key == 'a': use_apic = not use_apic
-    for s in range(10):
-        grid_v.fill([0, 0])
-        grid_m.fill(0)
-        if use_apic:
-            substep_APIC()
-        else:
-            substep_PIC()
-    scheme = 'APIC' if use_apic else 'PIC'
-    gui.clear(0x112F41)
-    gui.text('(D) Reset as dilation', pos=(0.05, 0.25))
-    gui.text('(T) Reset as translation', pos=(0.05, 0.2))
-    gui.text('(R) Reset as rotation', pos=(0.05, 0.15))
-    gui.text('(S) Reset as shearing', pos=(0.05, 0.1))
-    gui.text(f'(A) Scheme={scheme}', pos=(0.05, 0.05))
-    gui.circles(x.to_numpy(), radius=3, color=0x068587)
-    gui.show()
-```
+Refer to [pic_vs_apic codes](Taichi_images/pic_vs_apic.py) to learn about the difference between PIC and APIC.
 
 #### Interpolation function (kernel)
 There are mainly 3 kinds of interpolation function used in PIC/APIC/MPM.
