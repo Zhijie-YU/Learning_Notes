@@ -74,6 +74,9 @@
       - [Computation flow](#computation-flow-2)
     - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
       - [NS equations](#ns-equations)
+      - [Overall computaion flow](#overall-computaion-flow)
+      - [Divergence-free solver](#divergence-free-solver)
+      - [Constant density solver](#constant-density-solver)
       - [DFSPH cases](#dfsph-cases)
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
@@ -299,7 +302,7 @@ $$
 
 #### Explicit v.s. implicit time integration
 Explicit (forward Euler, symplectic Euler, RK, ...)
-$$\Delta t \leq c\sqrt{\frac{m}{k}} \quad c\approx1$$ 
+$$\Delta t \leq c\sqrt{\frac{m}{k}} \quad c\approx1$$
 
 Implicit (backward Euler, middle-point, ...)
 
@@ -1005,6 +1008,7 @@ In IISPH, $\omega=0.5$ is adopted.
 > + During the process, particle mass $m_i$ and density $\rho_i$ keep unchanged. Whether predicted density should be used is unclear yet :cry:. Currently we choose to use $\rho_0$ during the whole process.
 
 ### Divergence-free SPH (DFSPH)
+DFSPH adopts a constant density solver and a divergence-free solver simultaneously to fullfill the constant density condition and the divergence-free condition.
 #### NS equations
 The incompressible, isothermal NS equations in Lagrangian coordinates is adopted.
 $$
@@ -1021,13 +1025,81 @@ $$
 \end{aligned}
 $$
 
-Divergence-free helps the enforcement of incompressibility. However, this is not enough since numerical errors may also cause fluid compressibility. To correct this, another condition needs to be fullfilled called **constant density condition**(commonly adopted by other common SPH methods like PCISPH) which is written as
+Divergence-free helps the enforcement of incompressibility. However, this is not enough since numerical errors may also cause fluid compressibility. To correct this, another condition needs to be fullfilled called **constant density condition**(commonly adopted by other common SPH methods like PCISPH and IISPH) which is written as
 $$
 \rho-\rho_0=0
 $$
 
 To deal with these 2 conditions, 2 pressure solvers (**divergence-free solver + constant density solver**) are adopted simultaneously to consider the divergence error and density error, respectively.
 
+#### Overall computaion flow
+![](Taichi_images/DFSPH_overall_Alg.png)
+Similar to **IISPH**, an intermediate state([$\mathbf{F}_i^{adv}$](#pressure-and-non-pressure-force)) is computed without pressure forces. Based on this intermediate state, pressure is adjusted to fullfill the constant density and divergence-free conditions respectively with an EOS like in **WCSPH**.
+
+#### Divergence-free solver
+![](Taichi_images/DFSPH_DFsolver.png)
+A commonly used [EOS](#equation-of-state-eos) is written as
+$$p=\frac{\kappa\rho_0}{\gamma}\left(\left(\frac{\rho}{\rho_0}\right)^\gamma-1\right)$$
+
+By choosing $\gamma=1$, we have
+$$p_i=\kappa_i(\rho_i-\rho_0)$$
+
+The pressure force of particle $i$ is determined by
+$$\mathbf{F}_i^p=-\frac{m_i}{\rho_i}\nabla p_i=-\frac{m_i}{\rho_i}\kappa_i^v\sum_jm_j\nabla W_{ij}$$
+
+And the pressure force acting from particle $i$ on its neighboring particle $j$ is determined by
+$$\mathbf{F}^p_{j\leftarrow i}=-\frac{m_i}{\rho_i}\frac{\partial p_i}{\partial \mathbf{x}_j}=\frac{m_i}{\rho_i}\kappa_i^vm_j\nabla W_{ij}$$
+
+Based on the continuity equation, the density gradient is computed as
+$$\frac{D\rho_i}{Dt}=\sum_jm_j(\mathbf{v}_i-\mathbf{v}_j)\nabla W_{ij}$$
+
+The density gradient resulting from pressure forces is computed as
+$$(\frac{D\rho_i}{Dt})^p=\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p}{m_i}-\frac{\mathbf{F}^p_{j\leftarrow i}}{m_i}\right)\nabla W_{ij}$$
+
+To fulfill the divergence-free condition, we have
+$$\begin{aligned}
+  &\frac{D\rho_i}{Dt}+(\frac{D\rho_i}{Dt})^p=0\\
+  &\Rightarrow\frac{D\rho_i}{Dt}=-\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p}{m_i}-\frac{\mathbf{F}^p_{j\leftarrow i}}{m_i}\right)\nabla W_{ij}
+\end{aligned}$$
+
+By inserting the pressure forces, we finally get
+$$\frac{D\rho_i}{Dt}=\kappa_i^v\frac{\Delta t}{\rho_i}\left(\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2\right)$$
+
+For each particle, $\kappa$ can be computed for divergence-free condition.
+$$\begin{aligned}
+  \kappa_i^v&=\frac{1}{\Delta t}\frac{D\rho_i}{Dt}\cdot\frac{\rho_i}{\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2}\\
+  &=\frac{1}{\Delta t}\frac{D\rho_i}{Dt}\cdot\alpha_i\\
+  &=\frac{1}{\Delta t}\sum_jm_j(\mathbf{v}_i-\mathbf{v}_j)\nabla W_{ij}\cdot\alpha_i
+\end{aligned}$$
+
+And the total pressure forces acting on particle $i$ is
+$$\mathbf{F}^p_{i,total}=\mathbf{F}^p_i+\sum_j\mathbf{F}^p_{i\leftarrow j}=-m_i\sum_jm_j\left(\frac{\kappa_i^v}{\rho_i}+\frac{\kappa_j^v}{\rho_j}\right)\nabla W_{ij}$$
+
+And the velocity can thus be updated as in the figure.
+> Notes:pig::
+> + To prevent zero denominator, $\alpha_i=\frac{\rho_i}{\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2+\varepsilon}$ where $\varepsilon=10^{-6}$.
+> + $\alpha_i$ solely depends on particle positions, thus this value can be precomputed before the iteration.
+> + Warm start can be adopted for the iteration.
+> + Unlike other methods, in DFSPH each particle has its individual $\kappa$.
+
+#### Constant density solver
+![](Taichi_images/DFSPH_CDsolver.png)
+This constant density solver is altered to reuse the precomputed $\alpha_i$ for cheap computation.
+A predictor-corrector scheme is developed.
+$$\rho_i^*=\rho_i+\Delta t\frac{D\rho_i}{Dt}=\rho_i+\Delta t\sum_jm_j(\mathbf{v}_i^*-\mathbf{v}_j^*)\nabla W_{ij}$$
+
+And to correct the predicted density to the initial value, we have
+$$\begin{aligned}
+  \frac{\rho_0-\rho_i^*}{\Delta t}&=-\Delta t\sum_jm_j\left(\frac{\mathbf{F}_i^p}{m_i}-\frac{\mathbf{F}^p_{j\leftarrow i}}{m_i}\right)\nabla W_{ij}\\
+  \Rightarrow \rho_i^*-\rho_0&=\Delta t^2\sum_jm_j\left(\frac{\mathbf{F}_i^p}{m_i}-\frac{\mathbf{F}^p_{j\leftarrow i}}{m_i}\right)\nabla W_{ij}\\
+  \Rightarrow \kappa_i&=\frac{1}{\Delta t^2}(\rho_i^*-\rho_0)\alpha_i
+\end{aligned}$$
+
+Similar to the divergence-free solver, the velocity can be updated.
+
+> Notes:pig::
+> + Warm start can be adopted.
+> + Lookup tables is a technique used in the approximation of kernel function and its gradient. (still unclear how:cry:)
 
 
 #### DFSPH cases
