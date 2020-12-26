@@ -1069,15 +1069,20 @@ For each particle, $\kappa$ can be computed for divergence-free condition.
 $$\begin{aligned}
   \kappa_i^v&=\frac{1}{\Delta t}\frac{D\rho_i}{Dt}\cdot\frac{\rho_i}{\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2}\\
   &=\frac{1}{\Delta t}\frac{D\rho_i}{Dt}\cdot\alpha_i\\
-  &=\frac{1}{\Delta t}\sum_jm_j(\mathbf{v}_i-\mathbf{v}_j)\nabla W_{ij}\cdot\alpha_i
 \end{aligned}$$
 
+where $\frac{D\rho_i}{Dt}=\sum_jm_j(\mathbf{v}_i-\mathbf{v}_j)\nabla W_{ij}$.
+
 And the total pressure forces acting on particle $i$ is
-$$\mathbf{F}^p_{i,total}=\mathbf{F}^p_i+\sum_j\mathbf{F}^p_{i\leftarrow j}=-m_i\sum_jm_j\left(\frac{\kappa_i^v}{\rho_i}+\frac{\kappa_j^v}{\rho_j}\right)\nabla W_{ij}$$
+$$\begin{aligned}
+  \mathbf{F}^p_{i,total}&=\mathbf{F}^p_i+\sum_j\mathbf{F}^p_{i\leftarrow j}\\
+  &=-\frac{m_i}{\rho_i}\kappa_i^v\sum_jm_j\nabla W_{ij}-\sum_j\frac{m_j}{\rho_j}\kappa_j^vm_i\nabla W_{ij}\\
+  &=-m_i\sum_jm_j\left(\frac{\kappa_i^v}{\rho_i}+\frac{\kappa_j^v}{\rho_j}\right)\nabla W_{ij}
+\end{aligned}$$
 
 And the velocity can thus be updated as in the figure.
 > Notes:pig::
-> + To prevent zero denominator, $\alpha_i=\frac{\rho_i}{\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2+\varepsilon}$ where $\varepsilon=10^{-6}$.
+> + To prevent zero denominator, $\alpha_i=\frac{\rho_i}{\max\{\left|\sum_jm_j\nabla W_{ij}\right|^2+\sum_j|m_j\nabla W_{ij}|^2,\varepsilon\}}$ where $\varepsilon=10^{-6}$.
 > + $\alpha_i$ solely depends on particle positions, thus this value can be precomputed before the iteration.
 > + Warm start can be adopted for the iteration.
 > + Unlike other methods, in DFSPH each particle has its individual $\kappa$.
