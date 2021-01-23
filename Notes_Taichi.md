@@ -74,7 +74,7 @@
       - [Computation flow](#computation-flow-2)
     - [Divergence-free SPH (DFSPH)](#divergence-free-sph-dfsph)
       - [NS equations](#ns-equations)
-      - [Overall computaion flow](#overall-computaion-flow)
+      - [Overall computation flow](#overall-computation-flow)
       - [Divergence-free solver](#divergence-free-solver)
       - [Constant density solver](#constant-density-solver)
       - [DFSPH cases](#dfsph-cases)
@@ -994,7 +994,7 @@ Usually average density $\rho_{avg}^l=\frac{\sum_i \rho_i^l}{n}$ is predicted an
 $$\rho_i^l=\sum_jm_j(\mathbf{d}_{ii}p_i+\sum_j\mathbf{d}_{ij}p_j-\mathbf{d}_{jj}p_j-\sum_k\mathbf{d}_{jk}p_k)\nabla W_{ij}+\rho_i^{adv}$$
 
 #### Rigid-fluid coupling
-To be continue...
+To be continued...
 
 #### Computation flow
 ![](Taichi_images/IISPH_alg.png)
@@ -1032,7 +1032,7 @@ $$
 
 To deal with these 2 conditions, 2 pressure solvers (**divergence-free solver + constant density solver**) are adopted simultaneously to consider the divergence error and density error, respectively.
 
-#### Overall computaion flow
+#### Overall computation flow
 ![](Taichi_images/DFSPH_overall_Alg.png)
 Similar to **IISPH**, an intermediate state([$\mathbf{F}_i^{adv}$](#pressure-and-non-pressure-force)) is computed without pressure forces. Based on this intermediate state, pressure is adjusted to fullfill the constant density and divergence-free conditions respectively with an EOS like in **WCSPH**.
 
