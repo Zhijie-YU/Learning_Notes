@@ -78,6 +78,7 @@
       - [Divergence-free solver](#divergence-free-solver)
       - [Constant density solver](#constant-density-solver)
       - [DFSPH cases](#dfsph-cases)
+    - [Reconstructing smooth surfaces](#reconstructing-smooth-surfaces)
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
       - [Interpolation function (kernel)](#interpolation-function-kernel)
@@ -623,7 +624,7 @@ $$
 \sigma_3=\begin{cases}
   \frac{2}{3h},\quad&\rm{for\;dim=1}\\
   \frac{10}{7\pi h^2},&\rm{for\;dim=2}\\
-  \frac{1}{\pi h^3},&\rm{for\;dim=2}\\
+  \frac{1}{\pi h^3},&\rm{for\;dim=3}\\
 \end{cases}
 $$
 
@@ -1036,6 +1037,9 @@ To deal with these 2 conditions, 2 pressure solvers (**divergence-free solver + 
 ![](Taichi_images/DFSPH_overall_Alg.png)
 Similar to **IISPH**, an intermediate state([$\mathbf{F}_i^{adv}$](#pressure-and-non-pressure-force)) is computed without pressure forces. Based on this intermediate state, pressure is adjusted to fullfill the constant density and divergence-free conditions respectively with an EOS like in **WCSPH**.
 
+> How to deal with particles that do not have enough neighbors?? (Density is underestimated!!:cry::warning:)
+> **Particle deficiency problem**
+
 #### Divergence-free solver
 ![](Taichi_images/DFSPH_DFsolver.png)
 A commonly used [EOS](#equation-of-state-eos) is written as
@@ -1107,9 +1111,12 @@ Similar to the divergence-free solver, the velocity can be updated.
 > + Lookup tables is a technique used in the approximation of kernel function and its gradient. (still unclear how:cry:)
 
 
+
 #### DFSPH cases
 
-
+### Reconstructing smooth surfaces
+Marching cube is the main method for reshaping.
+[Reconstructing Surfaces of Particle-Based Fluids Using Anisotropic Kernels](https://www.cc.gatech.edu/~turk/my_papers/sph_surfaces.pdf) for smooth surfaces.
 
 
 ## Hybrid Eulerian-Lagrangian
