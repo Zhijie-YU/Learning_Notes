@@ -135,13 +135,6 @@ class SPHSolver:
         self.dt.from_numpy(
                 np.array(1.0 * self.dh / self.c_0, dtype=np.float32))
         
-        #self.grid_num_particles.fill(0)
-        #self.particle_neighbors.fill(-1)
-        #self.allocate_particles()
-        #self.search_neighbors()
-        #
-        #self.df_compute_density_alpha()
-        
     @ti.kernel
     def allocate_particles(self):
         # Ref to pbf2d example from by Ye Kuang (k-ye)
@@ -401,7 +394,7 @@ class SPHSolver:
         dt_a = self.CFL_a * np.sqrt(self.dh / np.max([self.max_a, 1e-5]))
 
         if self.adaptive_time_step:
-            self.dt[None] = np.min([dt_v, dt_a, 0.001])
+            self.dt[None] = np.min([dt_v, dt_a, 0.0005])
             
         self.max_rho = np.max(self.particle_density.to_numpy()[:total_num])
         self.max_pressure = np.max(self.particle_pressure.to_numpy()[:total_num])
@@ -551,8 +544,9 @@ class SPHSolver:
                             Gam = 0
                         fak += 0.5 * Gam * r/r_mod
                 #self.d_velocity[p_a] += fak / self.m
-                self.particle_velocity[p_a] += fak/self.m * self.dt
-                self.particle_positions[p_a] += self.particle_velocity[p_a] * self.dt
+                #self.particle_velocity[p_a] += fak/self.m * self.dt
+                self.particle_velocity_new[p_a] += fak/self.m * self.dt
+                #self.particle_positions[p_a] += self.particle_velocity[p_a] * self.dt
                 
     def sim_info_realtime(self, frame, t, curr_start, curr_end, total_start):
         print(
@@ -606,6 +600,7 @@ class SPHSolver:
                     "Warning: DFSPH density does not converge, iterated %d steps"
                     % self.it_density)
                 break
+        self.enforceBoundaryParticles()
         self.update_positions()
         
         self.posBasedUpdate()
@@ -632,7 +627,7 @@ class SPHSolver:
         self.update_velocities()                   
 
         # Handle potential leak particles
-        self.enforce_boundary()
+        #self.enforce_boundary()
         #self.enforceBoundaryParticles()
 
         curr_end = time.process_time()
@@ -693,9 +688,11 @@ class SPHSolver:
 
         num_dim = []
         for i in range(self.dim):
-            num_dim.append(
-                np.arange(lower_corner[i], lower_corner[i] + cube_size[i],
-                          self.dx))
+            pos = np.arange(lower_corner[i], lower_corner[i] + cube_size[i], self.dx)
+            if abs(lower_corner[i] + cube_size[i] - pos[-1]) < 1e-5:
+                pos = pos[:-1]
+            num_dim.append(pos)
+
         num_new_particles = reduce(lambda x, y: x * y,
                                    [len(n) for n in num_dim])
 
