@@ -606,7 +606,7 @@ An appropriate number of neighboring particles is 30 to 50 for each particle. If
 Particle size ($\tilde{h}$), smoothing length ($h$) and kernel support radius ($\hbar$) are 3 important but confusing concepts.
 **Particle size ($\tilde{h}$)**: particle size (aka characteristic length) is usually used to define the volume occupied by each particle and hence used to compute volume and mass given density.
 **Smoothing length ($h$)**: smoothing length is widely used to control the reach of each particle. However, the actual value of the range of influence is not exactly equal to that of the smoothing length depending on the type of kernel function chosen. $h$ is usually defined as $k * \tilde{h}$ where $k$ is usually set to 1.3 or 1.5.
-**Kernel support radius ($\hbar$)**: kernel support radius is the exact value of the particle range of influence. Different choice of kernel function can result in different $\hbar$ while the smoothing length keeps unchanged. For instance, in the [traditional cubic spline kernel](#kernel-function) $\hbar=2h$.
+**Kernel support radius ($\hbar$)**: kernel support radius is the exact value of the particle range of influence. Different choice of kernel function can result in different $\hbar$ while the smoothing length keeps unchanged. For instance, in the [classical cubic spline kernel](#kernel-function) $\hbar=2h$.
 <img src="./Taichi_images/sphH.png" style="zoom:30%" />
 
 ### SPH interpolation
@@ -1126,6 +1126,8 @@ Similar to the divergence-free solver, the velocity can be updated.
 
 
 #### DFSPH cases
+![](Taichi_images/DFSPH1.png)
+![](Taichi_images/drop.mp4)
 
 ### Reconstructing smooth surfaces
 Marching cube is the main method for reshaping.
