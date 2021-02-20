@@ -1051,6 +1051,10 @@ Similar to **IISPH**, an intermediate state([$\mathbf{F}_i^{adv}$](#pressure-and
 > How to deal with particles that do not have enough neighbors?? (Density is underestimated!!:cry:)
 > + **Boundary particle problem**
 > How to deal with the boundary conditions with particles?
+> + **Neighborhood search**
+> How to implement compact hashing?
+> + **Solid simulation**
+> How to simulate solid like concrete?
 
 
 #### Divergence-free solver
