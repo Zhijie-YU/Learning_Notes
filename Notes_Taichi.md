@@ -1708,7 +1708,7 @@ The following is a snapshot of a CPIC [program](mpm_cutting_rotation.py) about a
 ![](Taichi_images/frame_00054.png)
 ![](Taichi_images/fan.gif)
 
-The rotation fan case in [MLS-MPM paper](2018_mlsmpm.pdf).
+The rotation fan case in [MLS-MPM paper](https://www.seas.upenn.edu/~cffjiang/research/mlsmpm/hu2018mlsmpm.pdf).
 ![](Taichi_images/MLS-MPM_paperFan.png)
 
 
