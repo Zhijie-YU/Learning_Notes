@@ -57,6 +57,8 @@
       - [Converting FEM meshes to SPH particles](#converting-fem-meshes-to-sph-particles)
     - [Weakly compressible SPH (WCSPH)](#weakly-compressible-sph-wcsph)
       - [Kernel function](#kernel-function)
+        - [Cubic spline kernel](#cubic-spline-kernel)
+        - [Gaussian kernel](#gaussian-kernel)
       - [Governing equations and their SPH formulation](#governing-equations-and-their-sph-formulation)
         - [Continuity equation](#continuity-equation)
         - [Momentum equation](#momentum-equation)
@@ -83,11 +85,12 @@
       - [Constant density solver](#constant-density-solver)
       - [DFSPH cases](#dfsph-cases)
     - [Reconstructing smooth surfaces](#reconstructing-smooth-surfaces)
+    - [Solid SPH](#solid-sph)
   - [Hybrid Eulerian-Lagrangian](#hybrid-eulerian-lagrangian)
     - [Particle-in-cell (PIC/APIC/FLIP)](#particle-in-cell-picapicflip)
       - [Interpolation function (kernel)](#interpolation-function-kernel)
     - [Material Point Method (MPM)](#material-point-method-mpm)
-      - [Traditional MPM](#traditional-mpm)
+      - [Classical MPM](#classical-mpm)
         - [Deformation gradient](#deformation-gradient)
         - [Push forward and pull back (lagrangian and eulerian function)](#push-forward-and-pull-back-lagrangian-and-eulerian-function)
         - [Constitutive model](#constitutive-model)
@@ -632,6 +635,7 @@ This method allows for small, user-defined density fluctuations rather than stri
 Refer to [WCSPH2007](https://www.researchgate.net/publication/220789258_Weakly_Compressible_SPH_for_Free_Surface_Flows) for more details.
 
 #### Kernel function
+##### Cubic spline kernel
 A commonly used kernel function in SPH is the **cubic spline kernel** [Monaghan1992](http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf)(*actually there are many kinds of cubic spline kernels*:joy:):
 $$
 W(q)=\begin{cases}
@@ -652,6 +656,20 @@ $$
 
 And the gradient of the kernel function $\nabla W_{ij}$ which is commonly used in SPH is derived as
 $$\nabla W_{ij}=\frac{dW_{ij}}{dq}*\frac{\mathbf{r}}{\|\mathbf{r}\|}=\frac{dW_{ij}}{dq}*\frac{\mathbf{x}_i-\mathbf{x}_j}{\|\mathbf{x}_i-\mathbf{x}_j\|}$$
+
+##### Gaussian kernel
+$$
+W(q)=\sigma_3 e^{-q^2}
+$$
+
+where $q=\frac{\|\mathbf{r}\|}{h}$ and $\sigma_3$ is a dimensional normalizing factor given by:
+$$
+\sigma_3=\begin{cases}
+  \frac{1}{\sqrt{\pi}h},\quad&\rm{for\;dim=1}\\
+  \frac{1}{\pi h^2},&\rm{for\;dim=2}\\
+  \frac{1}{\pi^{\frac{3}{2}} h^3},&\rm{for\;dim=3}\\
+\end{cases}
+$$
 
 #### Governing equations and their SPH formulation
 ##### Continuity equation
@@ -702,7 +720,7 @@ There are different form of EOS with different conditions. In WCSPH, low compres
   However, large stiffness results in smaller time step and increases overall computation cost.
 
 #### Viscosity
-Artificial viscosity is employed to improve numerical stability and to allow for shock phenomena. 
+Artificial viscosity is employed to improve numerical stability and to allow for shock phenomena (preventing particle penetration). 
 $$\frac{d\mathbf{v}_a}{dt}=\begin{cases}
 -\sum_b m_b\Pi_{ab}\nabla_aW_{ab} \qquad&\mathbf{v}_{ab}^T\mathbf{x}_{ab}<0\\
 0 &\mathbf{v}_{ab}^T\mathbf{x}_{ab}\ge0
@@ -711,6 +729,22 @@ $\Pi_{ab}$ is given as
 $$\Pi_{ab}=-\nu\left(\frac{\mathbf{v}_{ab}^T\mathbf{x}_{ab}}{|\mathbf{x}_{ab}|^2+\varepsilon h^2}\right)$$
 
 with the viscous term $\nu=\frac{2\alpha h c_s}{\rho_a+\rho_b}$ and the viscosity constant $\alpha$ is usually in between 0.08 and 0.5. $\varepsilon h^2$ is introduced to avoid singularities for $|\mathbf{x}_{ab}|=0$ with $\varepsilon=0.01$.
+
+> In the paper "On the problem of penetration in particle methods" written by Monaghan in 1989, the viscosity is slightly different from the above one in WCSPH.
+$$\Pi_{ab}=\begin{cases}
+\frac{\alpha\zeta_{ab}\bar{c}_{ab}+\beta\zeta_{ab}^2}{\bar{\rho}_{ab}} \qquad&\mathbf{v}_{ab}\cdot\mathbf{x}_{ab}<0\\
+0 &\mathbf{v}_{ab}\cdot\mathbf{x}_{ab}\ge0
+\end{cases}$$
+>
+> where 
+$$\begin{aligned}
+  \zeta_{ab}&=-\frac{(\mathbf{v}_{ab}\cdot\mathbf{x}_{ab})h_{ab}}{|\mathbf{x}_{ab}|^2+\varepsilon h_{ab}^2}\\
+  \bar{c}_{ab}&=\frac{1}{2}(c_a+c_b)\\
+  \bar{\rho}_{ab}&=\frac{1}{2}(\rho_a+\rho_b)\\
+  h_{ab}&=\frac{1}{2}(h_a+h_b)\\
+\end{aligned}$$
+>
+> Among them, $c$ is the sound speed of the material, $\alpha$ and $\beta$ are the standard constants. The term associated with $\alpha$ reflects a bulk viscosity and is the same as the one in WCSPH. While the other term with $\beta$ is not included and is mainly used to prevent interpenetration of particles at high Mach number (especially useful for high speed cases).
 
 #### Surface tension (表面张力)
 In WCSPH, a new surface tension model is adopted which relies on cohesion forces.
@@ -1140,8 +1174,6 @@ Similar to the divergence-free solver, the velocity can be updated.
 > + Warm start can be adopted.
 > + Lookup tables is a technique used in the approximation of kernel function and its gradient. (still unclear how:cry:)
 
-
-
 #### DFSPH cases
 ![](Taichi_images/DFSPH1.png)
 ![](Taichi_images/drop.mp4)
@@ -1149,6 +1181,9 @@ Similar to the divergence-free solver, the velocity can be updated.
 ### Reconstructing smooth surfaces
 Marching cube is the main method for reshaping.
 [Reconstructing Surfaces of Particle-Based Fluids Using Anisotropic Kernels](https://www.cc.gatech.edu/~turk/my_papers/sph_surfaces.pdf) for smooth surfaces.
+
+### Solid SPH
+
 
 
 ## Hybrid Eulerian-Lagrangian
@@ -1237,7 +1272,7 @@ No elements in MPM.
 MPM particles => FEM quadrature points (Gaussian points)
 MPM equations are derived using weak formulation.
 
-#### Traditional MPM
+#### Classical MPM
 Refer to [2016 MPM course](https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf) for details.
 
 ##### Deformation gradient

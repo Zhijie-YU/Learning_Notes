@@ -69,9 +69,9 @@ The symmetric part: $\rm{sym}(\boldsymbol{T})\equiv\frac{1}{2}(\boldsymbol{T}+\b
 The skew part: $\rm{skew}(\boldsymbol{T})\equiv\frac{1}{2}(\boldsymbol{T}-\boldsymbol{T}^T)$
 
 #### Common tool tensors
-$\boldsymbol{I}$ is a second-order identity tensor:
+$\boldsymbol{\rm I}$ is a second-order identity tensor:
 $$
-I_{ij} = \boldsymbol{e}_i\cdot\boldsymbol{e}_j=\delta_{ij}
+\rm{I}_{ij} = \boldsymbol{e}_i\cdot\boldsymbol{e}_j=\delta_{ij}
 $$
 
 $\boldsymbol{\rm I}$ is a 4th-order identity tensor:
