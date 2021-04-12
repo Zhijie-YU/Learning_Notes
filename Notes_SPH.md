@@ -40,6 +40,9 @@
     - [Overall computation flow](#overall-computation-flow)
     - [Divergence-free solver](#divergence-free-solver)
     - [Constant density solver](#constant-density-solver)
+    - [Discussion about these 2 solvers](#discussion-about-these-2-solvers)
+    - [Dealing with particle deficiency](#dealing-with-particle-deficiency)
+    - [Boundary handling](#boundary-handling)
     - [DFSPH cases](#dfsph-cases)
   - [Reconstructing smooth surfaces](#reconstructing-smooth-surfaces)
   - [Solid SPH](#solid-sph)
@@ -83,6 +86,10 @@ It is essential to create evenly distributed particles for complex geometries to
 ### Extracting geometry from 3D mesh matrix
 An evenly distributed cartesian mesh is firstly created to fill the whole domain. And those elements associated with the geometry is labeled to distinguish them from the others. The preprocessing tool "GenCase" in the project [DualSPHysics](https://dual.sphysics.org/) is based on this method.
 ![](SPH_images/sph_preprocess1.png)
+This preprocess can also be obtained based on Cartesian mesh builder of Simetherm.
+![](SPH_images/Sim_gear.png)
+![](SPH_images/mesh_gear.png)
+![](SPH_images/particle_gear.png)
 ### Converting FEM meshes to SPH particles
 This method is based on FEM meshes. The geometry is firstly divided into FEM meshes. And these meshes are then converted to SPH particles. In this method, the meshes should be created as evenly distributed as possible to get a similar smoothing length for each particle which makes this method difficult and less accurate than the first method. The advantage is that this method makes the coupling of SPH and FEM easier and can make use of the mature FEM meshers. It is especially suitable for those analyses during which the heavily distorted FEM meshes can be converted to SPH particles. Abaqus adopts this method for its SPH solver.
 ![](SPH_images/sph_preprocess3.png)
@@ -94,7 +101,7 @@ Refer to [WCSPH2007](https://www.researchgate.net/publication/220789258_Weakly_C
 
 ### Kernel function
 #### Cubic spline kernel
-A commonly used kernel function in SPH is the **cubic spline kernel** [Monaghan1992](http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf)(*actually there are many kinds of cubic spline kernels*:joy:):
+A commonly used kernel function in SPH which is also used in WCSPH is the **cubic spline kernel** [Monaghan1992](http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf)(*actually there are many kinds of cubic spline kernels*:joy:):
 $$
 W(q)=\begin{cases}
   \sigma_3[1-\frac{3}{2}q^2+\frac{3}{4}q^3],\quad&\rm{for\; 0\leq q< 1}\\
@@ -151,11 +158,12 @@ SPH form (Pressure force + Body force)
 $$\frac{d\mathbf{v}_a}{dt}=-\sum_bm_b(\frac{p_a}{\rho_a^2}+\frac{p_b}{\rho_b^2})\nabla_aW_{ab}+\mathbf{g}$$
 
 #### Equation of state (EOS)
-There are different form of EOS with different conditions. In WCSPH, low compressibily is adopted.
-+ Incompressibility (Poisson equation)
+There are different form of EOS (describing the relationship between pressure and density) with different conditions. In WCSPH, low compressibily is adopted.
++ Incompressibility (Pressure poisson equation (PPE))
   $$\nabla^2p=\rho\frac{\nabla\cdot\mathbf{v}}{\Delta t}$$
 
   Solving this Poisson equation is time-consuming(PCG,MGPCG). Standard SPH and other methods like FVM directly solve this equation.
+  This PPE has different forms and can be derived from momentum equation and continuity equation. (Refer to [tutorial](https://interactivecomputergraphics.github.io/SPH-Tutorial/) for details about derivation.)
 + High compressibility (Ideal gas equation)
   $$p=k_p\rho\quad {\rm or} \quad p=k_p(\rho-\rho_0)$$
 
@@ -631,6 +639,15 @@ Similar to the divergence-free solver, the velocity can be updated.
 > Notes:pig::
 > + Warm start can be adopted.
 > + Lookup tables is a technique used in the approximation of kernel function and its gradient. (still unclear how:cry:)
+
+### Discussion about these 2 solvers
+The divergence-free solver directly uses the explicitly deduced density $\rho_i=\sum_j m_jW_{ij}$ as the current density and computes $\kappa$ based on the divergence-free condition $\frac{D\rho}{Dt}=-\rho\nabla\cdot\mathbf{v}=0$. With solved $\kappa$, the pressure force and then the velocity correction can be obtained.
+
+The constant density solver uses the density gradient $\frac{D\rho_i}{Dt}$ to update the explicitly deduced density as the current density $\rho_i^*=\rho_i+\Delta t\frac{D\rho_i}{Dt}$ and computes $\kappa$ based on the constant density condition (the final density should be corrected to $\rho_0$ thus the difference $\frac{D\rho_i}{Dt}=\frac{\rho_0-\rho_i^*}{\Delta t}$). With solved $\kappa$, the velocity can thus be corrected.
+
+### Dealing with particle deficiency
+
+### Boundary handling
 
 ### DFSPH cases
 ![](SPH_images/DFSPH1.png)
