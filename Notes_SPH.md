@@ -86,9 +86,10 @@ It is essential to create evenly distributed particles for complex geometries to
 ### Extracting geometry from 3D mesh matrix
 An evenly distributed cartesian mesh is firstly created to fill the whole domain. And those elements associated with the geometry is labeled to distinguish them from the others. The preprocessing tool "GenCase" in the project [DualSPHysics](https://dual.sphysics.org/) is based on this method.
 ![](SPH_images/sph_preprocess1.png)
+
 This preprocess can also be obtained based on Cartesian mesh builder of Simetherm.
-![](SPH_images/Sim_gear.png)
-![](SPH_images/mesh_gear.png)
+![](SPH_images/sim_gear.png)
+![](SPH_images/mesh_gear.PNG)
 ![](SPH_images/particle_gear.png)
 ### Converting FEM meshes to SPH particles
 This method is based on FEM meshes. The geometry is firstly divided into FEM meshes. And these meshes are then converted to SPH particles. In this method, the meshes should be created as evenly distributed as possible to get a similar smoothing length for each particle which makes this method difficult and less accurate than the first method. The advantage is that this method makes the coupling of SPH and FEM easier and can make use of the mature FEM meshers. It is especially suitable for those analyses during which the heavily distorted FEM meshes can be converted to SPH particles. Abaqus adopts this method for its SPH solver.
@@ -657,6 +658,4 @@ Marching cube is the main method for reshaping.
 [Reconstructing Surfaces of Particle-Based Fluids Using Anisotropic Kernels](https://www.cc.gatech.edu/~turk/my_papers/sph_surfaces.pdf) for smooth surfaces.
 
 ## Solid SPH
-
-
-
+<video src="https://www.zhihu.com/zvideo/1363795341050036224" width="800px" height="600px" controls="controls"></video>
