@@ -150,6 +150,8 @@ And the derivative is
 $$\frac{d\rho_a}{dt}=\sum_bm_b\mathbf{v}_{ab}\nabla_aW_{ab}$$
 
 where $\mathbf{v}_{ab}=\mathbf{v}_a-\mathbf{v}_b$ and $\nabla_aW_{ab}=\frac{dW_{ab}}{dq}*\frac{\mathbf{x}_a-\mathbf{x}_b}{\|\mathbf{x}_a-\mathbf{x}_b\|}$ are all vectors with $q=\frac{\|\mathbf{x}_a-\mathbf{x}_b\|}{h}$.
+> :secret: For general SPH kernels, $\frac{dW_{ab}}{dq}<0$, thus the direction of $\nabla_aW_{ab}$ is from current particle $a$ to its neighbor $b$.
+
 For this method, density changes are only due to relative motion of particles.
 #### Momentum equation
 General form
