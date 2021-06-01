@@ -65,6 +65,8 @@ def search(name):
 # 贪婪算法
 不完美但有用的简单算法 （完美往往是优秀的敌人）
 核心思想： 每一步均只考虑当前最大收益的选择
+
+![](Algorithm_images/greedy.png)
 ```py
 # {name: set([items])}
 all = {"1": {"a", "b", "c"},
@@ -94,5 +96,50 @@ print(greedy(all))
 ```
 NP完全问题（简称NPC问题，Non-deterministic complete problem）
 对于该类问题，几乎无法找到快速解法，可采用类似于贪婪算法这样的近似算法进行局部最优求解。
+
+# 动态规划
+将大问题分解为**互相独立**的子问题逐步求解，基于之前结果计算当前方案。
+
+![](Algorithm_images/dp.png)
+```py
+import numpy as np
+pocket = {"water": (3, 10),
+          "book": (1, 3),
+          "food": (2, 9),
+          "jacket": (2, 5),
+          "camera": (1, 6)}
+namemap = ["water", "book", "food", "jacket", "camera"]
+capacity = 6
+# the possible capacity ranges from 0 to 6
+clen = capacity + 1
+# only 2 rows are needed
+values = np.zeros((2, clen))
+names1 = [[]]*clen
+names2 = [[]]*clen
+for name in namemap:
+    for i in range(1, clen):
+        v1 = values[0, i]
+        c0, v0 = pocket[name]
+        names = [name]
+        if c0 > i:
+            v0 = 0
+            c0 = 0
+            names = []
+        v2 = v0 + values[0, i-c0]
+        if v1 > v2:
+            names2[i] = names1[i]
+            values[1, i] = v1
+        else:
+            names2[i] = names + names1[i-c0]
+            values[1, i] = v2
+
+    names1 = names2
+    names2 = [[]]*clen
+    values[0] = values[1]
+    values[1] = np.zeros(clen)
+
+print("Highest value: {}".format(values[0, -1]))
+print("Corresponding items: {}".format(names1[-1]))
+```
 
 
