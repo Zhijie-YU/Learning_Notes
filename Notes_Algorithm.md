@@ -142,4 +142,18 @@ print("Highest value: {}".format(values[0, -1]))
 print("Corresponding items: {}".format(names1[-1]))
 ```
 
+# K临近算法 (k-nearest neighbor)
+比较笨拙但有效的分类回归算法，通过定义“距离”比较相似性。
+早期的OCR(optical character recognition)以及人脸识别等均应用该算法，重难点在于人工构造特征。目前流行的机器学习算法可以看做是一种隐式的特征自动提取算法，本质思想上与KNN相通。
 
+# 并行算法
+性能瓶颈：
++ 并行性管理开销(reduce 归并函数)
++ 负载均衡(map 映射函数)
+
+# 哈希函数
+SHA算法(secure hash algorithm)
+哈希函数可以用于创建散列表，也可以用于比较文件是否相同或相似（相似需要使用局部敏感算法如simhash，即相似内容生成的哈希值也相似，非常适用于大文件比较如文章查重）
+
+# 线性规划
+Simplex算法
