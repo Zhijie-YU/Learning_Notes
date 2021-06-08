@@ -660,4 +660,6 @@ Marching cube is the main method for reshaping.
 [Reconstructing Surfaces of Particle-Based Fluids Using Anisotropic Kernels](https://www.cc.gatech.edu/~turk/my_papers/sph_surfaces.pdf) for smooth surfaces.
 
 ## Solid SPH
+<img src="https://www.zhihu.com/zvideo/1363795341050036224">
+
 <video src="https://www.zhihu.com/zvideo/1363795341050036224" width="800px" height="600px" controls="controls"></video>
